@@ -1,36 +1,43 @@
 import React from 'react';
-import { MapPin, Activity, Settings, Info } from 'lucide-react';
+import { Recycle, Activity, Settings, Info, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   totalSites?: number;
   activeConnections?: number;
+  onNavigate?: (page: 'home' | 'about' | 'settings') => void;
 }
 
 /**
  * Application header component providing branding, navigation, and system status
- * Displays the SF District Heating System title with real-time connection statistics
+ * Displays the pyrecycleheat title with real-time connection statistics and navigation
  */
 const Header: React.FC<HeaderProps> = ({ 
   totalSites = 0, 
-  activeConnections = 0 
+  activeConnections = 0,
+  onNavigate = () => {}
 }) => {
   return (
     <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between px-6 py-4">
         {/* Left Section - Branding */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-md">
-              <MapPin className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-3">
+            {/* Liquid Glass Logo */}
+            <div className="relative group cursor-pointer" onClick={() => onNavigate('home')}>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-2xl blur-sm opacity-75 group-hover:opacity-100 transition-all duration-300 animate-pulse"></div>
+              <div className="relative p-3 bg-gradient-to-br from-emerald-500/90 via-teal-600/90 to-cyan-700/90 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl group-hover:scale-105 transition-all duration-300">
+                <div className="absolute inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-xl"></div>
+                <Recycle className="h-7 w-7 text-white relative z-10 drop-shadow-lg" />
+              </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                SF District Heating Explorer
+              <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                pyrecycleheat - san francisco
               </h1>
               <p className="text-sm text-gray-600">
-                Real-time energy distribution network
+                Sustainable energy distribution network
               </p>
             </div>
           </div>
@@ -66,7 +73,18 @@ const Header: React.FC<HeaderProps> = ({
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-gray-600 hover:text-gray-900"
+            className="text-gray-600 hover:text-gray-900 hover:bg-emerald-50 transition-colors"
+            onClick={() => onNavigate('home')}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Home
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-gray-600 hover:text-gray-900 hover:bg-teal-50 transition-colors"
+            onClick={() => onNavigate('settings')}
           >
             <Settings className="h-4 w-4 mr-2" />
             Settings
@@ -75,7 +93,8 @@ const Header: React.FC<HeaderProps> = ({
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-gray-600 hover:text-gray-900"
+            className="text-gray-600 hover:text-gray-900 hover:bg-cyan-50 transition-colors"
+            onClick={() => onNavigate('about')}
           >
             <Info className="h-4 w-4 mr-2" />
             About
