@@ -1,12 +1,12 @@
 import React from 'react';
-import { Recycle, Activity, Settings, Info, Home } from 'lucide-react';
+import { Recycle, Activity, Info, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   totalSites?: number;
   activeConnections?: number;
-  onNavigate?: (page: 'home' | 'about' | 'settings') => void;
+  onNavigate?: (page: 'home' | 'about') => void;
 }
 
 /**
@@ -78,16 +78,6 @@ const Header: React.FC<HeaderProps> = ({
           >
             <Home className="h-4 w-4 mr-2" />
             Home
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-gray-600 hover:text-gray-900 hover:bg-teal-50 transition-colors"
-            onClick={() => onNavigate('settings')}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
           </Button>
           
           <Button 
