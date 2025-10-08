@@ -1,10 +1,10 @@
 {
-  "name": "sf-datamap-explorer",
+  "name": "pyrecycleheat-sf",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Interactive map visualization for exploring data centers across San Francisco",
-  "author": "SF DataMap Explorer Team",
+  "description": "Interactive map visualization for exploring heat centers and demand sites across San Francisco",
+  "author": "pyrecycleheat",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

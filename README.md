@@ -1,90 +1,195 @@
-# SF DataMap Explorer
+# SF Data Map Explorer
 
-An interactive map visualization tool for exploring data centers across San Francisco. Built with modern web technologies to provide a smooth, responsive experience for discovering and learning about the city's digital infrastructure.
+A modern, interactive web application for visualizing and managing San Francisco's district heating infrastructure. This application provides real-time monitoring, analytics, and management capabilities for heat centers, demand sites, and distribution networks.
 
-## Features
+## 🌟 Features
 
-- **Interactive Map**: Explore San Francisco with smooth pan and zoom controls
-- **3D/2D Toggle**: Switch between 2D and 3D map views for different perspectives
-- **Data Center Markers**: Discover data centers with detailed information popups
-- **Search Functionality**: Quickly find specific locations or data centers
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Modern UI**: Clean, glass-morphism design with intuitive controls
+### Interactive Map Visualization
+- **3D Map Experience**: Immersive 3D visualization of San Francisco with terrain and building data
+- **Smart Markers**: Liquid glass-effect markers with hover animations and status indicators
+- **Responsive Popups**: Detailed information panels with smart positioning to prevent overflow
+- **Real-time Data**: Live updates of heat center and demand site status
 
-## Tech Stack
+### Statistics Dashboard
+- **Live Statistics Sidebar**: Real-time counts of active/inactive centers and sites
+- **Energy Metrics**: Maximum output, demand tracking, and system capacity monitoring
+- **Professional Header**: System status overview with connection statistics
 
-- **React 18** - Modern React with hooks and functional components
-- **TypeScript** - Type-safe development experience
-- **Vite** - Fast build tool and development server
-- **MapLibre GL** - High-performance vector map rendering
-- **Tailwind CSS** - Utility-first CSS framework
-- **Radix UI** - Accessible component primitives
-- **React Query** - Server state management
+### Data Management
+- **Heat Centers**: Monitor power plants, waste-to-energy facilities, and geothermal plants
+- **Demand Sites**: Track residential, commercial, and industrial heating demands
+- **Distribution Routes**: Visualize and manage heating distribution networks
+- **Analytics**: Comprehensive system performance metrics and insights
 
-## Getting Started
+## 🚀 Technology Stack
+
+### Frontend
+- **React 18** with TypeScript for type-safe development
+- **Vite** for fast development and optimized builds
+- **Tailwind CSS** for modern, responsive styling
+- **MapLibre GL JS** for interactive 3D mapping
+- **Tanstack Query** for efficient data fetching and caching
+- **Lucide React** for consistent iconography
+
+### Backend
+- **FastAPI** for high-performance API development
+- **SQLAlchemy** for robust database operations
+- **Pydantic** for data validation and serialization
+- **SQLite** for development (easily configurable for production databases)
+
+## 📦 Installation & Setup
 
 ### Prerequisites
+- Node.js 18+ and npm
+- Python 3.8+
+- Git
 
-- Node.js (v16 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
+### Backend Setup
 ```bash
-git clone <repository-url>
-cd sf-datamap-explorer
+# Navigate to backend directory
+cd backend
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the development server
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-2. Install dependencies:
+### Frontend Setup
 ```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
 npm install
-```
 
-3. Start the development server:
-```bash
+# Start the development server
 npm run dev
 ```
 
-4. Open your browser and navigate to `http://localhost:8080`
+The application will be available at:
+- Frontend: http://localhost:8080
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
 
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── MapComponent.tsx # Main map interface
-│   ├── SearchBar.tsx    # Search functionality
-│   ├── MapControls.tsx  # Map control buttons
-│   └── DataCenterPopup.tsx # Info popups
-├── data/               # Static data files
-│   └── dataCenters.json # Data center information
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions
-└── pages/              # Page components
+sf-datamap-explorer/
+├── backend/
+│   ├── app.py              # FastAPI application
+│   ├── models.py           # Database models
+│   ├── requirements.txt    # Python dependencies
+│   └── test.db            # SQLite database
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── pages/         # Page components
+│   │   ├── services/      # API services
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── main.tsx       # Application entry point
+│   ├── package.json       # Node.js dependencies
+│   └── vite.config.ts     # Vite configuration
+└── README.md              # Project documentation
 ```
 
-## Available Scripts
+## 🎨 Key Components
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+### MapComponent
+The heart of the application, featuring:
+- 3D terrain visualization with San Francisco bounds
+- Custom liquid glass markers with hover effects
+- Smart popup positioning system
+- Real-time data integration
 
-## Contributing
+### StatsSidebar
+Professional statistics panel displaying:
+- Active/inactive heat centers and demand sites
+- Maximum energy output and demand metrics
+- Total system capacity and utilization
+
+### Header
+System navigation and status overview:
+- Application branding and navigation
+- Real-time connection statistics
+- Professional design with loading states
+
+## 🔧 Configuration
+
+### Environment Variables
+Create a `.env` file in the backend directory:
+```env
+DATABASE_URL=sqlite:///./test.db
+# For production, use PostgreSQL:
+# DATABASE_URL=postgresql://user:password@localhost/dbname
+```
+
+### Development vs Production
+The application is configured for easy deployment:
+- Development: SQLite database with hot reloading
+- Production: Configurable database with optimized builds
+
+## 📊 API Endpoints
+
+### Heat Centers
+- `GET /heat-centers` - List all heat centers
+- `POST /heat-centers` - Create new heat center
+- `GET /heat-centers/{id}` - Get specific heat center
+- `PUT /heat-centers/{id}` - Update heat center
+- `DELETE /heat-centers/{id}` - Delete heat center
+
+### Demand Sites
+- `GET /demand-sites` - List all demand sites
+- `POST /demand-sites` - Create new demand site
+- `GET /demand-sites/{id}` - Get specific demand site
+- `PUT /demand-sites/{id}` - Update demand site
+- `DELETE /demand-sites/{id}` - Delete demand site
+
+### Analytics
+- `GET /analytics/overview` - System overview statistics
+- `GET /analytics/heat-center/{id}` - Heat center analytics
+- `GET /analytics/demand-site/{id}` - Demand site analytics
+
+## 🚀 Deployment
+
+### Frontend Deployment
+```bash
+cd frontend
+npm run build
+# Deploy the dist/ folder to your hosting service
+```
+
+### Backend Deployment
+```bash
+cd backend
+# Configure production database
+# Deploy using Docker, Heroku, or your preferred platform
+```
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+## 📝 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
-- Map data provided by MapTiler
-- Icons from Lucide React
-- UI components built with Radix UI primitives
+- OpenStreetMap for base map tiles
+- MapTiler for 3D terrain and building data
+- The FastAPI and React communities for excellent documentation
+- San Francisco for being an inspiring city for urban technology
+
+---
+
+**Built with ❤️ for sustainable urban heating solutions**
