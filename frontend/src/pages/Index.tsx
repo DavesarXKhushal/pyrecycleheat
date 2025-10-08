@@ -5,14 +5,17 @@ import MapComponent from '@/components/MapComponent';
 import SearchBar from '@/components/SearchBar';
 import StatsSidebar from '@/components/StatsSidebar';
 import Header from '@/components/Header';
+import About from '@/pages/About';
+import Settings from '@/pages/Settings';
 import { heatCenterService, demandSiteService } from '@/services/api';
 
 /**
  * Main application page component
- * Orchestrates the layout and data flow between header, sidebar, and map components
+ * Orchestrates the layout and data flow between header, sidebar, map components, and navigation
  */
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState<'home' | 'about' | 'settings'>('home');
   const { toast } = useToast();
 
   // Fetch heat centers data with proper error handling and caching
@@ -88,12 +91,28 @@ const Index = () => {
     );
   }
 
+  // Handle navigation between pages
+  const handleNavigate = (page: 'home' | 'about' | 'settings') => {
+    setCurrentPage(page);
+  };
+
+  // Show About page
+  if (currentPage === 'about') {
+    return <About onNavigate={handleNavigate} />;
+  }
+
+  // Show Settings page
+  if (currentPage === 'settings') {
+    return <Settings onNavigate={handleNavigate} />;
+  }
+
   return (
     <div className="flex flex-col w-full h-screen overflow-hidden bg-gray-50">
       {/* Application Header */}
       <Header 
         totalSites={totalSites} 
         activeConnections={activeConnections} 
+        onNavigate={handleNavigate}
       />
       
       {/* Main Content Area */}
