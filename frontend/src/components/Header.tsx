@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({
   onNavigate = () => {}
 }) => {
   return (
-    <header className="bg-secondary/80 backdrop-blur-md border-b border-border shadow-lg">
+    <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between px-6 py-4">
         {/* Left Section - Branding */}
         <div className="flex items-center gap-4">
@@ -36,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({
               <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
                 pyrecycleheat - san francisco
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600">
                 Sustainable energy distribution network
               </p>
             </div>
@@ -45,24 +45,24 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Center Section - Status Indicators */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-            <Activity className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+            <Activity className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-gray-700">
               System Status
             </span>
-            <Badge variant="default" className="bg-primary/20 text-foreground">
+            <Badge variant="default" className="bg-green-100 text-green-800">
               Online
             </Badge>
           </div>
           
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <span className="font-medium">{totalSites}</span>
               <span>Total Sites</span>
             </div>
-            <div className="w-px h-4 bg-border"></div>
+            <div className="w-px h-4 bg-gray-300"></div>
             <div className="flex items-center gap-1">
-              <span className="font-medium text-primary">{activeConnections}</span>
+              <span className="font-medium text-green-600">{activeConnections}</span>
               <span>Active</span>
             </div>
           </div>
@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="text-gray-600 hover:text-gray-900 hover:bg-emerald-50 transition-colors"
             onClick={() => onNavigate('home')}
           >
             <Home className="h-4 w-4 mr-2" />
@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="text-gray-600 hover:text-gray-900 hover:bg-cyan-50 transition-colors"
             onClick={() => onNavigate('about')}
           >
             <Info className="h-4 w-4 mr-2" />

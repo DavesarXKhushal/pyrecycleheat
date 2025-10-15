@@ -29,11 +29,18 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
         }`}>
           {/* Enhanced main glass background with better visibility */}
           <div 
-            className="absolute inset-0 rounded-3xl border border-glass bg-glass"
+            className="absolute inset-0 rounded-3xl border border-white/30"
             style={{
-              backdropFilter: 'var(--glass-backdrop)',
-              WebkitBackdropFilter: 'var(--glass-backdrop)',
-              boxShadow: 'var(--glass-shadow)'
+              background: 'rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(60px) saturate(180%) brightness(1.1)',
+              WebkitBackdropFilter: 'blur(60px) saturate(180%) brightness(1.1)',
+              boxShadow: `
+                0 12px 40px rgba(0, 0, 0, 0.15),
+                0 4px 12px rgba(0, 0, 0, 0.1),
+                inset 0 2px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -2px 0 rgba(255, 255, 255, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.1)
+              `
             }}
           />
           
@@ -41,17 +48,17 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
           <div 
             className="absolute inset-0 rounded-3xl pointer-events-none opacity-80"
             style={{ 
-              background: 'linear-gradient(135deg, var(--glass-highlight) 0%, var(--glass-highlight) 40%, transparent 100%)'
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 30%, rgba(255, 255, 255, 0.1) 70%, rgba(255, 255, 255, 0.05) 100%)'
             }}
           />
           
           {/* Multi-layer inner glow for depth */}
-          <div className="absolute inset-[1px] bg-gradient-to-br from-foreground/10 via-foreground/5 to-foreground/10 rounded-3xl pointer-events-none" />
-          <div className="absolute inset-[2px] bg-gradient-to-t from-foreground/5 to-foreground/10 rounded-3xl pointer-events-none" />
+          <div className="absolute inset-[1px] bg-gradient-to-br from-white/15 via-white/5 to-white/10 rounded-3xl pointer-events-none" />
+          <div className="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-3xl pointer-events-none" />
           
           {/* Enhanced top highlight line */}
-          <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-foreground/40 to-transparent" />
-          <div className="absolute top-1 left-8 right-8 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+          <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+          <div className="absolute top-1 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
           
           {/* Enhanced focus ring with liquid effect */}
           {isFocused && (
@@ -84,9 +91,10 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
               onChange={handleInputChange}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              className="border-0 bg-transparent text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 text-lg font-medium h-auto p-0 w-full font-poppins"
+              className="border-0 bg-transparent text-gray-900 placeholder:text-gray-600 focus-visible:ring-0 focus-visible:ring-offset-0 text-lg font-medium h-auto p-0 w-full font-poppins drop-shadow-sm"
               style={{ 
-                fontFamily: 'Poppins, sans-serif'
+                fontFamily: 'Poppins, sans-serif',
+                textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
               }}
             />
           </div>
@@ -97,11 +105,12 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
               variant="ghost"
               size="icon"
               onClick={onMicrophoneClick}
-              className="h-14 w-14 rounded-2xl hover:bg-glass text-foreground transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-glass shadow-glass"
+              className="h-14 w-14 rounded-2xl hover:bg-white/30 text-gray-700 hover:text-gray-900 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20 shadow-lg"
               style={{
-                backdropFilter: 'var(--glass-backdrop)',
-                WebkitBackdropFilter: 'var(--glass-backdrop)',
-                background: 'var(--glass)'
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                background: 'rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
               }}
             >
               <Mic className="h-6 w-6 drop-shadow-sm" />
@@ -123,7 +132,7 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
         <div 
           className="absolute -bottom-2 left-6 right-6 h-2 opacity-40 rounded-full"
           style={{
-            background: 'linear-gradient(90deg, transparent, var(--glass-highlight), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
             filter: 'blur(2px)'
           }}
         />

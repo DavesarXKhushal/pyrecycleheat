@@ -67,20 +67,20 @@ const Index = () => {
   // Display error state if data fetching fails
   if (hasError && !isLoading) {
     return (
-      <div className="flex flex-col w-full h-screen bg-background">
+      <div className="flex flex-col w-full h-screen bg-gray-50">
         <Header totalSites={0} activeConnections={0} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center p-8">
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Unable to Load Data
             </h2>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-gray-600 mb-4">
               There was an error connecting to the server. Please check your connection and try again.
             </p>
             <button 
               onClick={() => window.location.reload()} 
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Retry
             </button>
@@ -101,7 +101,7 @@ const Index = () => {
   }
 
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden bg-background">
+    <div className="flex flex-col w-full h-screen overflow-hidden bg-gray-50">
       {/* Application Header */}
       <Header 
         totalSites={totalSites} 
