@@ -13,14 +13,14 @@ interface AboutProps {
  */
 const About: React.FC<AboutProps> = ({ onNavigate }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div className="min-h-screen bg-surface-gradient">
       {/* Header */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      <div className="bg-secondary backdrop-blur-sm border-b border-border shadow-sm">
         <div className="flex items-center justify-between px-6 py-4">
           <Button 
             variant="ghost" 
             onClick={() => onNavigate('home')}
-            className="text-gray-600 hover:text-gray-900 hover:bg-emerald-50"
+            className="text-foreground hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Map
@@ -48,7 +48,7 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
           <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent mb-4">
             Sustainable Energy for San Francisco
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             pyrecycleheat is revolutionizing urban energy distribution through innovative heat recycling 
             and sustainable district heating solutions, creating a cleaner future for San Francisco.
           </p>
@@ -56,36 +56,36 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-white/80 backdrop-blur-sm border-emerald-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <Card className="bg-card/80 backdrop-blur-sm border-border hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader>
               <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl w-fit mb-4">
                 <Zap className="h-6 w-6 text-white" />
               </div>
-              <CardTitle className="text-emerald-700">Energy Efficiency</CardTitle>
+              <CardTitle className="text-foreground">Energy Efficiency</CardTitle>
               <CardDescription>
                 Advanced heat recovery systems that capture and redistribute waste energy across the city
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-teal-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <Card className="bg-card/80 backdrop-blur-sm border-border hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader>
               <div className="p-3 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl w-fit mb-4">
                 <Globe className="h-6 w-6 text-white" />
               </div>
-              <CardTitle className="text-teal-700">Environmental Impact</CardTitle>
+              <CardTitle className="text-foreground">Environmental Impact</CardTitle>
               <CardDescription>
                 Reducing carbon emissions by 40% through intelligent heat distribution networks
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-cyan-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <Card className="bg-card/80 backdrop-blur-sm border-border hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader>
               <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl w-fit mb-4">
                 <Users className="h-6 w-6 text-white" />
               </div>
-              <CardTitle className="text-cyan-700">Community Focus</CardTitle>
+              <CardTitle className="text-foreground">Community Focus</CardTitle>
               <CardDescription>
                 Serving over 50,000 residents with affordable, sustainable heating solutions
               </CardDescription>
@@ -94,14 +94,14 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
         </div>
 
         {/* Mission Statement */}
-        <Card className="bg-white/90 backdrop-blur-sm border-gray-200 shadow-xl mb-12">
+        <Card className="bg-card/90 backdrop-blur-sm border-border shadow-xl mb-12">
           <CardHeader>
             <CardTitle className="text-2xl text-center bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
               Our Mission
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-lg text-gray-700 leading-relaxed max-w-4xl mx-auto">
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-4xl mx-auto">
               To create a sustainable, efficient, and equitable energy future for San Francisco by harnessing 
               the power of waste heat recovery and district heating technology. We believe that every building, 
               every neighborhood, and every community deserves access to clean, affordable energy that doesn't 
@@ -117,26 +117,26 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
               <Target className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-3xl font-bold text-emerald-600 mb-2">85%</h3>
-            <p className="text-gray-600">Energy Efficiency Rate</p>
+            <p className="text-muted-foreground">Energy Efficiency Rate</p>
           </div>
           <div className="text-center">
             <div className="p-4 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl w-fit mx-auto mb-4">
               <Recycle className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-3xl font-bold text-teal-600 mb-2">12MW</h3>
-            <p className="text-gray-600">Heat Recycled Daily</p>
+            <p className="text-muted-foreground">Heat Recycled Daily</p>
           </div>
           <div className="text-center">
             <div className="p-4 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl w-fit mx-auto mb-4">
               <Award className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-3xl font-bold text-cyan-600 mb-2">40%</h3>
-            <p className="text-gray-600">CO₂ Reduction</p>
+            <p className="text-muted-foreground">CO₂ Reduction</p>
           </div>
         </div>
 
         {/* Technology Section */}
-        <Card className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-sm border-emerald-200">
+        <Card className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-sm border-border">
           <CardHeader>
             <CardTitle className="text-2xl text-center bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
               How It Works
@@ -145,26 +145,26 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
-                <h4 className="text-xl font-semibold text-gray-800 mb-4">Smart Heat Recovery</h4>
-                <p className="text-gray-600 leading-relaxed mb-4">
+                <h4 className="text-xl font-semibold text-foreground mb-4">Smart Heat Recovery</h4>
+                <p className="text-muted-foreground leading-relaxed mb-4">
                   Our advanced sensors and AI-powered distribution system identifies waste heat sources 
                   throughout the city and intelligently routes this energy to areas with heating demand.
                 </p>
-                <h4 className="text-xl font-semibold text-gray-800 mb-4">District Network</h4>
-                <p className="text-gray-600 leading-relaxed">
+                <h4 className="text-xl font-semibold text-foreground mb-4">District Network</h4>
+                <p className="text-muted-foreground leading-relaxed">
                   A comprehensive underground network of insulated pipes carries heated water from 
                   sources to destinations, creating an efficient city-wide heating grid.
                 </p>
               </div>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-cyan-600 rounded-2xl blur-xl opacity-30"></div>
-                <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl p-8 border border-white/50">
+                <div className="relative bg-card/90 backdrop-blur-sm rounded-2xl p-8 border border-border">
                   <div className="text-center">
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-full mb-4">
                       <Recycle className="h-10 w-10 text-white" />
                     </div>
-                    <h5 className="font-semibold text-gray-800 mb-2">Real-time Monitoring</h5>
-                    <p className="text-sm text-gray-600">
+                    <h5 className="font-semibold text-foreground mb-2">Real-time Monitoring</h5>
+                    <p className="text-sm text-muted-foreground">
                       24/7 system optimization for maximum efficiency
                     </p>
                   </div>
