@@ -85,51 +85,51 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 220 13% 9%;
+    --background: 220 15% 5%;
     --foreground: 220 13% 95%;
 
-    --card: 220 13% 12%;
+    --card: 220 13% 7%;
     --card-foreground: 220 13% 95%;
 
-    --popover: 220 13% 12%;
+    --popover: 220 13% 7%;
     --popover-foreground: 220 13% 95%;
 
-    --primary: 200 100% 55%;
+    --primary: 200 100% 52%;
     --primary-foreground: 220 13% 9%;
 
-    --secondary: 220 13% 15%;
+    --secondary: 220 13% 10%;
     --secondary-foreground: 220 13% 95%;
 
-    --muted: 220 13% 15%;
+    --muted: 220 13% 12%;
     --muted-foreground: 220 9% 65%;
 
-    --accent: 193 100% 65%;
+    --accent: 193 100% 60%;
     --accent-foreground: 220 13% 9%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 220 13% 95%;
 
-    --border: 220 13% 20%;
-    --input: 220 13% 20%;
-    --ring: 200 100% 55%;
+    --border: 220 13% 16%;
+    --input: 220 13% 16%;
+    --ring: 200 100% 52%;
 
     /* Dark mode custom tokens */
     --primary-glow: 193 100% 70%;
     --tech-gradient: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     --surface-gradient: linear-gradient(180deg, hsl(var(--background)), hsl(var(--secondary)));
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.3);
-    --shadow-search: 0 8px 25px -5px hsl(0 0% 0% / 0.25);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.35);
+    --shadow-search: 0 8px 25px -5px hsl(0 0% 0% / 0.35);
     --shadow-marker: 0 4px 12px -2px hsl(var(--primary) / 0.4);
     
     /* Dark mode glass morphism effects */
-    --glass-bg: hsl(var(--background) / 0.7);
-    --glass-border: hsl(var(--border) / 0.3);
-    --glass-shadow: 0 8px 32px 0 hsl(0 0% 0% / 0.3);
+    --glass-bg: hsl(var(--background) / 0.6);
+    --glass-border: hsl(var(--border) / 0.35);
+    --glass-shadow: 0 8px 32px 0 hsl(0 0% 0% / 0.4);
     --glass-backdrop: blur(20px) saturate(180%);
-    --glass-highlight: hsl(var(--foreground) / 0.1);
+    --glass-highlight: hsl(var(--foreground) / 0.07);
 
     /* Enhanced dark mode glass morphism effects */
-    --glass: hsla(var(--background) / 0.25);
+    --glass: hsla(var(--background) / 0.30);
     --glass-border-enhanced: hsla(255, 255, 255, 0.12);
     --glass-highlight-enhanced: hsla(255, 255, 255, 0.15);
     --glass-shadow-enhanced: 0 8px 32px hsla(0, 0%, 0%, 0.6);
@@ -139,13 +139,13 @@ All colors MUST be HSL.
     --shadow-elegant: 0 10px 30px -10px hsla(var(--primary) / 0.4);
     --shadow-glow: 0 0 40px hsla(var(--primary) / 0.5);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 240 5.9% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 240 3.7% 18%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 240 3.7% 12%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
