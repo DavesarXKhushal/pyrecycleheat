@@ -218,12 +218,12 @@ export const MARKER_COLORS = {
     disconnected: '#6b7280', // gray-500
     priority_high: '#dc2626', // red-600
     priority_medium: '#f59e0b', // amber-500
-    priority_low: '#10b981',  // emerald-500
+    priority_low: '#9ca3af',  // gray-400
   },
 } as const;
 
 export const ROUTE_COLORS = {
-  ACTIVE: '#22c55e',        // green-500
+  ACTIVE: '#9ca3af',        // gray-400
   MAINTENANCE: '#f59e0b',   // amber-500
   PLANNED: '#8b5cf6',       // violet-500
   DECOMMISSIONED: '#6b7280', // gray-500
