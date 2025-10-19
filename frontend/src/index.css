@@ -187,6 +187,25 @@ All colors MUST be HSL.
     display: none !important;
   }
 
+  /* Hide any default MapLibre close buttons */
+  .maplibregl-popup-close-button {
+    display: none !important;
+  }
+
+  /* Hide any additional close button elements */
+  .maplibregl-popup .maplibregl-popup-close-button,
+  .maplibregl-popup-content .maplibregl-popup-close-button,
+  .maplibregl-popup::before,
+  .maplibregl-popup::after {
+    display: none !important;
+  }
+
+  /* Ensure no pseudo-elements add close buttons */
+  .maplibregl-popup *::before,
+  .maplibregl-popup *::after {
+    content: none !important;
+  }
+
   /* Responsive popup positioning */
   @media (max-width: 640px) {
     .maplibregl-popup {
