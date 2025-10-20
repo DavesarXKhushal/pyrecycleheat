@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { 
   Calculator, 
   Building2, 
@@ -17,13 +19,14 @@ import {
   Search,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 
-// Import our custom components
 import DataCenterInputForm, { DataCenterFormData } from './DataCenterInputForm';
 import CarbonCreditForm, { CarbonCreditFormData } from './CarbonCreditForm';
-import SavingsPredictionResults, { SavingsPredictionResult } from './SavingsPredictionResults';
+import SavingsPredictionResults from './SavingsPredictionResults';
+import GoogleMapComponent from './GoogleMapComponent';
 
 interface SavingsPredictionDashboardProps {
   className?: string;
@@ -41,8 +44,8 @@ interface DataCenter {
 
 interface CarbonCredit {
   id: number;
-  name: string;
-  price_per_ton_co2: number;
+  project_name: string;
+  price_per_ton: number;
   certification_standard: string;
   project_type: string;
   created_at: string;
@@ -65,21 +68,27 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<string>("calculate");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
   
   // Data state
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
   const [carbonCredits, setCarbonCredits] = useState<CarbonCredit[]>([]);
   const [predictionHistory, setPredictionHistory] = useState<PredictionHistory[]>([]);
-  const [currentPrediction, setCurrentPrediction] = useState<SavingsPredictionResult | null>(null);
+  const [currentPrediction, setCurrentPrediction] = useState<any>(null);
   
   // Form state
   const [selectedDataCenter, setSelectedDataCenter] = useState<number | null>(null);
   const [selectedCarbonCredit, setSelectedCarbonCredit] = useState<number | null>(null);
   const [showDataCenterForm, setShowDataCenterForm] = useState(false);
   const [showCarbonCreditForm, setShowCarbonCreditForm] = useState(false);
+  
+  // Search and map state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showMap, setShowMap] = useState(false);
 
   // API base URL
-  const API_BASE = 'http://localhost:8000/api/v1/predictions';
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
   // Load initial data
   useEffect(() => {
@@ -89,38 +98,60 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
   }, []);
 
   const loadDataCenters = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/data-centers`);
+      setLoadingMessage('Loading data centers...');
+      setLoadingProgress(20);
+      const response = await fetch(`${API_BASE}/api/v1/predictions/data-centers`);
       if (response.ok) {
         const data = await response.json();
         setDataCenters(data);
+        setLoadingProgress(40);
+      } else {
+        setError('Failed to load data centers');
       }
     } catch (error) {
       console.error('Failed to load data centers:', error);
+      setError('Network error while loading data centers');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const loadCarbonCredits = async () => {
     try {
-      const response = await fetch(`${API_BASE}/carbon-credits`);
+      setLoadingMessage('Loading carbon credits...');
+      setLoadingProgress(60);
+      const response = await fetch(`${API_BASE}/api/v1/predictions/carbon-credits`);
       if (response.ok) {
         const data = await response.json();
         setCarbonCredits(data);
+        setLoadingProgress(80);
+      } else {
+        setError('Failed to load carbon credits');
       }
     } catch (error) {
       console.error('Failed to load carbon credits:', error);
+      setError('Network error while loading carbon credits');
     }
   };
 
   const loadPredictionHistory = async () => {
     try {
-      const response = await fetch(`${API_BASE}/predictions?limit=10`);
+      setLoadingMessage('Loading prediction history...');
+      setLoadingProgress(90);
+      const response = await fetch(`${API_BASE}/api/v1/predictions/predictions?limit=10`);
       if (response.ok) {
         const data = await response.json();
         setPredictionHistory(data);
+        setLoadingProgress(100);
+        setLoadingMessage('Complete!');
+      } else {
+        setError('Failed to load prediction history');
       }
     } catch (error) {
       console.error('Failed to load prediction history:', error);
+      setError('Network error while loading prediction history');
     }
   };
 
@@ -129,7 +160,7 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE}/data-centers`, {
+      const response = await fetch(`${API_BASE}/api/v1/predictions/data-centers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +189,7 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE}/carbon-credits`, {
+      const response = await fetch(`${API_BASE}/api/v1/predictions/carbon-credits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,9 +221,14 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
 
     setIsLoading(true);
     setError(null);
+    setLoadingProgress(0);
+    setLoadingMessage('Preparing calculation...');
     
     try {
-      const response = await fetch(`${API_BASE}/calculate`, {
+      setLoadingProgress(25);
+      setLoadingMessage('Sending request to server...');
+      
+      const response = await fetch(`${API_BASE}/api/v1/predictions/calculate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,10 +242,15 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
         }),
       });
 
+      setLoadingProgress(75);
+      setLoadingMessage('Processing results...');
+
       if (response.ok) {
         const predictionResult = await response.json();
         setCurrentPrediction(predictionResult);
         setActiveTab('results');
+        setLoadingProgress(100);
+        setLoadingMessage('Calculation complete!');
         loadPredictionHistory(); // Refresh history
       } else {
         const errorData = await response.json();
@@ -219,7 +260,52 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
       setError('Network error occurred while calculating prediction');
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        setLoadingProgress(0);
+        setLoadingMessage('');
+      }, 2000);
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await Promise.all([
+        loadDataCenters(),
+        loadCarbonCredits(),
+        loadPredictionHistory()
+      ]);
+    } catch (error) {
+      setError('Failed to refresh data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (!currentPrediction) {
+      setError('No prediction results to export');
+      return;
+    }
+
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      prediction: currentPrediction,
+      dataCenter: dataCenters.find(dc => dc.id === selectedDataCenter),
+      carbonCredit: carbonCredits.find(cc => cc.id === selectedCarbonCredit)
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `prediction-results-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   const formatCurrency = (amount: number): string => {
@@ -236,29 +322,80 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
   };
 
   return (
-    <div className={`w-full max-w-7xl mx-auto p-6 space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Calculator className="h-8 w-8 text-blue-600" />
-            Data Center Savings Prediction
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Calculate energy savings, carbon reduction, and financial returns for data center optimization
-          </p>
+    <div className={`w-full min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 ${className}`}>
+      <div className="max-w-7xl mx-auto p-4 lg:p-6 space-y-4 lg:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Calculator className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
+              Data Center Savings Prediction
+            </h1>
+            <p className="text-gray-600 mt-2 text-sm lg:text-base">
+              Calculate energy savings, carbon reduction, and financial returns for data center optimization
+            </p>
+          </div>
+          
+          {/* Search Bar with Glass Effect */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <div className="relative min-w-0 flex-1 lg:flex-none">
+              <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-lg"></div>
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 h-4 w-4 text-gray-500 z-10" />
+                <Input
+                  type="text"
+                  placeholder="Search data centers, locations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 w-full lg:w-64 bg-white/80 backdrop-blur-sm border-white/50 rounded-lg shadow-sm focus:bg-white/90 focus:border-blue-300 transition-all duration-200 text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleRefresh}
+                variant="outline"
+                disabled={isLoading}
+                size="sm"
+                className="text-sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+              <Button 
+                onClick={handleExport}
+                variant="outline"
+                disabled={!currentPrediction}
+                size="sm"
+                className="text-sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={loadPredictionHistory}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
+
+        {/* Google Maps Integration */}
+        {showMap && (
+          <Card className="mb-4 lg:mb-6">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                Data Center Locations
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Interactive map showing data center locations in San Francisco
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 lg:h-96 w-full rounded-lg overflow-hidden">
+                <GoogleMapComponent searchQuery={searchQuery} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Error Alert */}
       {error && (
@@ -267,9 +404,24 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
         </Alert>
       )}
 
+      {/* Loading Progress */}
+      {isLoading && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{loadingMessage}</span>
+                <span className="text-sm text-muted-foreground">{loadingProgress}%</span>
+              </div>
+              <Progress value={loadingProgress} className="w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="calculate" className="flex items-center gap-2">
             <Calculator className="h-4 w-4" />
             Calculate
@@ -277,6 +429,10 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
           <TabsTrigger value="results" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Results
+          </TabsTrigger>
+          <TabsTrigger value="map" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Map
           </TabsTrigger>
           <TabsTrigger value="manage" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -372,9 +528,9 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-medium">{cc.name}</h4>
+                            <h4 className="font-medium">{cc.project_name}</h4>
                             <p className="text-sm text-gray-600">
-                              ${cc.price_per_ton_co2}/ton • {cc.certification_standard}
+                              ${cc.price_per_ton}/ton • {cc.certification_standard}
                             </p>
                           </div>
                           <Badge variant="secondary">
@@ -429,9 +585,9 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
         <TabsContent value="results">
           {currentPrediction ? (
             <SavingsPredictionResults 
-              prediction={currentPrediction}
-              isLoading={isLoading}
-            />
+                  results={currentPrediction} 
+                  isLoading={isLoading} 
+                />
           ) : (
             <Card>
               <CardContent className="p-12 text-center">
@@ -448,6 +604,80 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Map Tab */}
+        <TabsContent value="map" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                Interactive Data Center Map
+              </CardTitle>
+              <CardDescription>
+                Explore data center locations across San Francisco with interactive mapping and search functionality
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Enhanced Search Bar */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50 backdrop-blur-sm rounded-lg border border-blue-200/30 shadow-sm"></div>
+                  <div className="relative flex items-center">
+                    <Search className="absolute left-4 h-5 w-5 text-blue-500 z-10" />
+                    <Input
+                      type="text"
+                      placeholder="Search by data center name, location, or address..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-12 pr-4 py-3 w-full bg-white/90 backdrop-blur-sm border-blue-200/50 rounded-lg shadow-sm focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                    />
+                  </div>
+                </div>
+                
+                {/* Full-screen Map */}
+                <div className="h-[600px] w-full rounded-xl overflow-hidden border border-gray-200 shadow-lg">
+                  <GoogleMapComponent searchQuery={searchQuery} />
+                </div>
+                
+                {/* Map Controls and Info */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-blue-600" />
+                        <span className="font-semibold text-blue-900">Data Centers</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-800 mt-1">{dataCenters.length}</p>
+                      <p className="text-sm text-blue-600">Active locations</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2">
+                        <Leaf className="h-5 w-5 text-green-600" />
+                        <span className="font-semibold text-green-900">Carbon Credits</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-800 mt-1">{carbonCredits.length}</p>
+                      <p className="text-sm text-green-600">Available options</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                        <span className="font-semibold text-purple-900">Predictions</span>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-800 mt-1">{predictionHistory.length}</p>
+                      <p className="text-sm text-purple-600">Completed analyses</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Manage Tab */}
@@ -490,8 +720,8 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
                   {carbonCredits.slice(0, 5).map((cc) => (
                     <div key={cc.id} className="flex justify-between items-center p-2 border rounded">
                       <div>
-                        <p className="font-medium">{cc.name}</p>
-                        <p className="text-sm text-gray-600">${cc.price_per_ton_co2}/ton</p>
+                        <p className="font-medium">{cc.project_name}</p>
+                        <p className="text-sm text-gray-600">${cc.price_per_ton}/ton</p>
                       </div>
                       <Badge variant="outline">{cc.certification_standard}</Badge>
                     </div>
@@ -509,16 +739,53 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
         <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle>Prediction History</CardTitle>
-              <CardDescription>
-                View and manage your previous savings calculations
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Prediction History</CardTitle>
+                  <CardDescription>
+                    View and manage your previous savings calculations
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={loadPredictionHistory}
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const historyData = {
+                        timestamp: new Date().toISOString(),
+                        history: predictionHistory,
+                        total_predictions: predictionHistory.length
+                      };
+                      const dataStr = JSON.stringify(historyData, null, 2);
+                      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                      const exportFileDefaultName = `prediction-history-${new Date().toISOString().split('T')[0]}.json`;
+                      const linkElement = document.createElement('a');
+                      linkElement.setAttribute('href', dataUri);
+                      linkElement.setAttribute('download', exportFileDefaultName);
+                      linkElement.click();
+                    }}
+                    variant="outline" 
+                    size="sm"
+                    disabled={predictionHistory.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export History
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {predictionHistory.length > 0 ? (
                 <div className="space-y-3">
                   {predictionHistory.map((prediction) => (
-                    <div key={prediction.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                    <div key={prediction.id} className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-medium">{prediction.scenario_name}</h4>
@@ -531,17 +798,48 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
                             {formatCurrency(prediction.annual_savings)}/year
                           </p>
                           <p className="text-sm text-gray-600">
-                            {prediction.roi_percentage.toFixed(1)}% ROI
+                            {prediction.roi_percentage?.toFixed(1) || 0}% ROI
                           </p>
                         </div>
                       </div>
                       <div className="flex justify-between items-center mt-2">
                         <Badge variant="secondary">
-                          {prediction.payback_period_years.toFixed(1)} year payback
+                          {prediction.payback_period_years?.toFixed(1) || 0} year payback
                         </Badge>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(prediction.created_at)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">
+                            {formatDate(prediction.created_at)}
+                          </span>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Load this prediction as current
+                              setCurrentPrediction({
+                                annual_energy_savings_mwh: prediction.annual_savings / 100, // Estimate
+                                annual_cost_savings_usd: prediction.annual_savings,
+                                co2_reduction_tons_per_year: prediction.annual_savings / 50, // Estimate
+                                heat_recovery_potential_mwh: prediction.annual_savings / 80, // Estimate
+                                roi_percent: prediction.roi_percentage,
+                                payback_period_years: prediction.payback_period_years,
+                                npv_usd: prediction.annual_savings * 5, // Estimate
+                                formulas_used: {
+                                  energy_savings: "Historical data",
+                                  cost_savings: "Historical data",
+                                  co2_reduction: "Historical data",
+                                  heat_recovery: "Historical data",
+                                  roi: "Historical data",
+                                  payback_period: "Historical data",
+                                  npv: "Historical data"
+                                }
+                              });
+                              setActiveTab('results');
+                            }}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            View Details
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -595,6 +893,7 @@ const SavingsPredictionDashboard: React.FC<SavingsPredictionDashboardProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

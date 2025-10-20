@@ -19,7 +19,7 @@ import json
 
 # Import prediction models and services
 from prediction_models import (
-    DataCenter, CarbonCredit, HeatSink, SavingsPrediction, PredictionScenario
+    DataCenter, CarbonCredit, HeatSink, PredictionResult
 )
 from prediction_service import PredictionService
 from prediction_engine import DataCenterPredictionEngine
@@ -94,8 +94,8 @@ class DataCenterResponse(DataCenterBase):
         from_attributes = True
 
 class CarbonCreditBase(BaseModel):
-    name: str
-    price_per_ton_co2: float = Field(..., gt=0, description="Price per ton of CO2")
+    project_name: str
+    price_per_ton: float = Field(..., gt=0, description="Price per ton of CO2")
     validity_years: int = Field(5, ge=1, le=20, description="Validity period in years")
     certification_standard: str = Field("VCS", description="Certification standard")
     project_type: str = Field("Renewable Energy", description="Project type")
@@ -122,12 +122,13 @@ class HeatSinkBase(BaseModel):
     location_lng: float
     address: Optional[str] = None
     sink_type: str = Field("district_heating", description="Type of heat sink")
-    heat_demand_kw: float = Field(..., gt=0, description="Heat demand in kW")
-    operating_temp_celsius: float = Field(60.0, ge=30, le=150, description="Operating temperature in Celsius")
-    heat_price_kwh: Optional[float] = Field(None, gt=0, description="Heat price per kWh")
-    connection_cost_km: Optional[float] = Field(100000, gt=0, description="Connection cost per km")
+    capacity_mw: float = Field(..., gt=0, description="Heat capacity in MW")
+    current_demand_mw: float = Field(0.0, ge=0, description="Current demand in MW")
+    temperature_requirement_c: float = Field(60.0, ge=30, le=150, description="Temperature requirement in Celsius")
     seasonal_factor: float = Field(1.0, ge=0.1, le=2.0, description="Seasonal demand factor")
-    efficiency_percent: float = Field(85.0, ge=0, le=100, description="Heat transfer efficiency percentage")
+    connection_cost_per_km: Optional[float] = Field(100000, gt=0, description="Connection cost per km")
+    heat_price_per_mwh: Optional[float] = Field(50.0, gt=0, description="Heat price per MWh")
+    operating_hours_year: int = Field(8760, ge=1, le=8760, description="Operating hours per year")
 
 class HeatSinkCreate(HeatSinkBase):
     pass
@@ -196,8 +197,8 @@ class PredictionResponse(BaseModel):
         from_attributes = True
 
 # Dependency to get prediction service
-def get_prediction_service(db: Session = Depends(get_db)) -> PredictionService:
-    return PredictionService(db)
+def get_prediction_service() -> PredictionService:
+    return PredictionService()
 
 # Data Center endpoints
 @router.get("/data-centers", response_model=List[DataCenterResponse])
@@ -206,7 +207,6 @@ async def get_data_centers(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
-    """Get all data centers with pagination."""
     data_centers = db.query(DataCenter).offset(skip).limit(limit).all()
     return data_centers
 
@@ -215,17 +215,15 @@ async def create_data_center(
     data_center: DataCenterCreate, 
     db: Session = Depends(get_db)
 ):
-    """Create a new data center."""
-    service = get_prediction_service(db)
+    service = get_prediction_service()
     try:
-        new_data_center = service.create_data_center(data_center.dict())
+        new_data_center = service.create_data_center(db, data_center.dict())
         return new_data_center
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/data-centers/{data_center_id}", response_model=DataCenterResponse)
 async def get_data_center(data_center_id: int, db: Session = Depends(get_db)):
-    """Get a specific data center by ID."""
     data_center = db.query(DataCenter).filter(DataCenter.id == data_center_id).first()
     if not data_center:
         raise HTTPException(status_code=404, detail="Data center not found")
@@ -237,7 +235,6 @@ async def update_data_center(
     data_center_update: DataCenterUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update a data center."""
     data_center = db.query(DataCenter).filter(DataCenter.id == data_center_id).first()
     if not data_center:
         raise HTTPException(status_code=404, detail="Data center not found")
@@ -253,7 +250,6 @@ async def update_data_center(
 
 @router.delete("/data-centers/{data_center_id}")
 async def delete_data_center(data_center_id: int, db: Session = Depends(get_db)):
-    """Delete a data center."""
     data_center = db.query(DataCenter).filter(DataCenter.id == data_center_id).first()
     if not data_center:
         raise HTTPException(status_code=404, detail="Data center not found")
@@ -269,7 +265,6 @@ async def get_carbon_credits(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
-    """Get all carbon credits with pagination."""
     carbon_credits = db.query(CarbonCredit).offset(skip).limit(limit).all()
     return carbon_credits
 
@@ -278,8 +273,7 @@ async def create_carbon_credit(
     carbon_credit: CarbonCreditCreate, 
     db: Session = Depends(get_db)
 ):
-    """Create a new carbon credit."""
-    service = get_prediction_service(db)
+    service = get_prediction_service()
     try:
         new_carbon_credit = service.create_carbon_credit(carbon_credit.dict())
         return new_carbon_credit
@@ -288,7 +282,6 @@ async def create_carbon_credit(
 
 @router.get("/carbon-credits/{carbon_credit_id}", response_model=CarbonCreditResponse)
 async def get_carbon_credit(carbon_credit_id: int, db: Session = Depends(get_db)):
-    """Get a specific carbon credit by ID."""
     carbon_credit = db.query(CarbonCredit).filter(CarbonCredit.id == carbon_credit_id).first()
     if not carbon_credit:
         raise HTTPException(status_code=404, detail="Carbon credit not found")
@@ -302,7 +295,6 @@ async def get_heat_sinks(
     available_only: bool = Query(False),
     db: Session = Depends(get_db)
 ):
-    """Get all heat sinks with pagination."""
     query = db.query(HeatSink)
     if available_only:
         query = query.filter(HeatSink.is_available == True)
@@ -315,8 +307,7 @@ async def create_heat_sink(
     heat_sink: HeatSinkCreate, 
     db: Session = Depends(get_db)
 ):
-    """Create a new heat sink."""
-    service = get_prediction_service(db)
+    service = get_prediction_service()
     try:
         new_heat_sink = service.create_heat_sink(heat_sink.dict())
         return new_heat_sink
@@ -325,7 +316,6 @@ async def create_heat_sink(
 
 @router.get("/heat-sinks/{heat_sink_id}", response_model=HeatSinkResponse)
 async def get_heat_sink(heat_sink_id: int, db: Session = Depends(get_db)):
-    """Get a specific heat sink by ID."""
     heat_sink = db.query(HeatSink).filter(HeatSink.id == heat_sink_id).first()
     if not heat_sink:
         raise HTTPException(status_code=404, detail="Heat sink not found")
@@ -338,8 +328,7 @@ async def get_nearby_heat_sinks(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
-    """Get heat sinks near a data center."""
-    service = get_prediction_service(db)
+    service = get_prediction_service()
     try:
         nearby_sinks = service.find_nearby_heat_sinks(data_center_id, max_distance_km, limit)
         return nearby_sinks
@@ -353,8 +342,7 @@ async def calculate_savings_prediction(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    """Calculate comprehensive savings prediction for a data center."""
-    service = get_prediction_service(db)
+    service = get_prediction_service()
     
     try:
         # Validate that data center and carbon credit exist
@@ -366,63 +354,111 @@ async def calculate_savings_prediction(
         if not carbon_credit:
             raise HTTPException(status_code=404, detail="Carbon credit not found")
         
-        # Calculate prediction
-        prediction_result = service.calculate_prediction(
+        # Get heat sink if provided
+        heat_sink = None
+        if prediction_request.heat_sink_ids and len(prediction_request.heat_sink_ids) > 0:
+            heat_sink = db.query(HeatSink).filter(HeatSink.id == prediction_request.heat_sink_ids[0]).first()
+        
+        # Apply custom parameters to override data center defaults
+        custom_params = {}
+        if prediction_request.custom_pue is not None:
+            custom_params['pue'] = prediction_request.custom_pue
+        if prediction_request.custom_efficiency is not None:
+            custom_params['efficiency'] = prediction_request.custom_efficiency
+        if prediction_request.custom_electricity_rate is not None:
+            custom_params['electricity_cost_kwh'] = prediction_request.custom_electricity_rate
+        if prediction_request.custom_carbon_price is not None:
+            custom_params['carbon_price'] = prediction_request.custom_carbon_price
+        
+        # Calculate comprehensive prediction using the correct method
+        prediction_result = service.calculate_comprehensive_prediction(
+            session=db,
             data_center_id=prediction_request.data_center_id,
             carbon_credit_id=prediction_request.carbon_credit_id,
             heat_sink_id=prediction_request.heat_sink_ids[0] if prediction_request.heat_sink_ids else None,
-            prediction_years=prediction_request.analysis_years,
-            scenarios=[prediction_request.scenario_name]
+            analysis_years=prediction_request.analysis_years,
+            scenario_name=prediction_request.scenario_name,
+            custom_params=custom_params
         )
         
-        # Transform the result to match PredictionResponse model
-        base_case = prediction_result.get("base_case", {})
-        scenario_data = prediction_result.get("scenarios", {}).get(prediction_request.scenario_name, {})
-        heat_sink_analysis = prediction_result.get("heat_sink_analysis", {})
+        # Get effective electricity cost for calculations
+        effective_electricity_cost = custom_params.get('electricity_cost_kwh', data_center.electricity_cost_kwh)
         
-        # Create response matching the expected model
+        # Debug logging
+        print(f"DEBUG: effective_electricity_cost = {effective_electricity_cost}")
+        print(f"DEBUG: data_center.electricity_cost_kwh = {data_center.electricity_cost_kwh}")
+        print(f"DEBUG: custom_params = {custom_params}")
+        
+        # Extract metrics from the comprehensive result
+        energy_metrics = prediction_result.get("energy_metrics", {})
+        carbon_metrics = prediction_result.get("carbon_metrics", {})
+        financial_metrics = prediction_result.get("financial_metrics", {})
+        savings_metrics = prediction_result.get("savings_metrics", {})
+        heat_recovery_metrics = prediction_result.get("heat_recovery_metrics", {})
+        
+        # Calculate energy values correctly
+        annual_energy_mwh = energy_metrics.get("annual_energy_consumption_kwh", 0) / 1000
+        
+        # Get actual energy savings from savings metrics (base case - improved case)
+        base_case = prediction_result.get("base_case", {})
+        improved_case = prediction_result.get("improved_case", {})
+        
+        base_energy_kwh = base_case.get("annual_energy_consumption_kwh", 0)
+        improved_energy_kwh = improved_case.get("annual_energy_consumption_kwh", 0)
+        energy_savings_kwh = max(base_energy_kwh - improved_energy_kwh, 0)
+        energy_savings_mwh = energy_savings_kwh / 1000
+        
+        energy_savings_percentage = (energy_savings_mwh / annual_energy_mwh * 100) if annual_energy_mwh > 0 else 0
+        
+        # Calculate CO2 reduction percentage
+        annual_co2_tons = carbon_metrics.get("annual_co2_emissions_tons", 0)
+        co2_reduction_tons = savings_metrics.get("annual_co2_reduction_kg", 0) / 1000
+        co2_reduction_percentage = (co2_reduction_tons / annual_co2_tons * 100) if annual_co2_tons > 0 else 0
+        
+        # Create response with real calculated values
         response = PredictionResponse(
             prediction_id=0,  # Will be set when saved
-            data_center_name=prediction_result.get("data_center", {}).get("name", "Unknown"),
+            data_center_name=data_center.name,
             scenario_name=prediction_request.scenario_name,
             prediction_date=datetime.utcnow(),
             
             # Energy Metrics
-            annual_energy_consumption_mwh=base_case.get("total_annual_kwh", 0) / 1000,  # Convert kWh to MWh
-            energy_cost_per_year=base_case.get("energy_opex_annual", 0),
-            energy_savings_mwh=scenario_data.get("energy_savings_annual", 0) / 1000,
-            energy_savings_percentage=0.0,  # Calculate if needed
+            annual_energy_consumption_mwh=annual_energy_mwh,
+            energy_cost_per_year=energy_metrics.get("annual_energy_consumption_kwh", 0) * effective_electricity_cost,  # Fix energy cost calculation
+            energy_savings_mwh=energy_savings_mwh,
+            energy_savings_percentage=round(energy_savings_percentage, 2),
             
             # Carbon Metrics
-            annual_co2_emissions_tons=base_case.get("annual_co2_tons", 0),
-            co2_reduction_tons=scenario_data.get("carbon_savings_annual", 0),
-            co2_reduction_percentage=0.0,  # Calculate if needed
-            carbon_credit_cost=base_case.get("carbon_credit_opex_annual", 0),
+            annual_co2_emissions_tons=annual_co2_tons,
+            co2_reduction_tons=co2_reduction_tons,
+            co2_reduction_percentage=round(co2_reduction_percentage, 2),
+            carbon_credit_cost=co2_reduction_tons * carbon_credit.price_per_ton,
             
             # Financial Metrics
-            total_capex=base_case.get("total_capex", 0),
-            annual_opex=base_case.get("total_opex_annual", 0),
-            annual_savings=scenario_data.get("total_savings_annual", 0),
-            net_present_value=scenario_data.get("net_present_value", 0),
-            return_on_investment=scenario_data.get("return_on_investment_percent", 0),
-            payback_period_years=scenario_data.get("payback_period_years", 999.0),  # Use 999 instead of inf
+            total_capex=savings_metrics.get("additional_capex_required", 0),
+            annual_opex=improved_case.get("total_annual_opex", 0),  # Use improved case OPEX
+            annual_savings=savings_metrics.get("net_annual_savings", 0),
+            net_present_value=financial_metrics.get("net_present_value", 0),
+            return_on_investment=financial_metrics.get("roi_percent", 0),
+            payback_period_years=financial_metrics.get("simple_payback_years", 999.0),
             
             # Heat Recovery
-            recoverable_heat_mw=0.0,  # Calculate if needed
-            heat_utilization_percentage=0.0,
-            nearest_heat_sink_distance_km=heat_sink_analysis.get("distance_km", 0),
-            heat_sink_name=heat_sink_analysis.get("selected_sink"),
+            recoverable_heat_mw=heat_recovery_metrics.get("recoverable_heat_kw", 0) / 1000,
+            heat_utilization_percentage=75.0,  # Typical utilization rate
+            nearest_heat_sink_distance_km=prediction_result.get("distance_to_sink_km", 0),
+            heat_sink_name=heat_sink.name if heat_sink else None,
             
             # Yearly Breakdown
             yearly_breakdown=prediction_result.get("yearly_breakdown", []),
             
             # Sensitivity Analysis
-            sensitivity_analysis=None
+            sensitivity_analysis=prediction_result.get("sensitivity_analysis", {})
         )
         
         # Save prediction in background
         background_tasks.add_task(
-            service.save_prediction,
+            service.save_prediction_result,
+            db,
             prediction_result
         )
         
@@ -438,13 +474,12 @@ async def get_predictions(
     data_center_id: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """Get saved predictions with pagination."""
-    query = db.query(SavingsPrediction)
+    query = db.query(PredictionResult)
     
     if data_center_id:
-        query = query.filter(SavingsPrediction.data_center_id == data_center_id)
+        query = query.filter(PredictionResult.data_center_id == data_center_id)
     
-    predictions = query.order_by(SavingsPrediction.created_at.desc()).offset(skip).limit(limit).all()
+    predictions = query.order_by(PredictionResult.created_at.desc()).offset(skip).limit(limit).all()
     
     return [
         {
@@ -452,18 +487,17 @@ async def get_predictions(
             "data_center_id": p.data_center_id,
             "scenario_name": p.scenario_name,
             "annual_savings": p.annual_savings,
-            "roi_percentage": p.roi_percentage,
+            "internal_rate_return": p.internal_rate_return,
             "payback_period_years": p.payback_period_years,
             "created_at": p.created_at,
-            "prediction_results": json.loads(p.prediction_results) if p.prediction_results else None
+            "detailed_results": json.loads(p.detailed_results) if p.detailed_results else None
         }
         for p in predictions
     ]
 
 @router.get("/predictions/{prediction_id}", response_model=Dict[str, Any])
 async def get_prediction(prediction_id: int, db: Session = Depends(get_db)):
-    """Get a specific prediction by ID."""
-    prediction = db.query(SavingsPrediction).filter(SavingsPrediction.id == prediction_id).first()
+    prediction = db.query(PredictionResult).filter(PredictionResult.id == prediction_id).first()
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
     
@@ -481,8 +515,7 @@ async def get_prediction(prediction_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/predictions/{prediction_id}")
 async def delete_prediction(prediction_id: int, db: Session = Depends(get_db)):
-    """Delete a prediction."""
-    prediction = db.query(SavingsPrediction).filter(SavingsPrediction.id == prediction_id).first()
+    prediction = db.query(PredictionResult).filter(PredictionResult.id == prediction_id).first()
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
     
@@ -493,16 +526,15 @@ async def delete_prediction(prediction_id: int, db: Session = Depends(get_db)):
 # Analytics endpoints
 @router.get("/analytics/summary")
 async def get_prediction_analytics(db: Session = Depends(get_db)):
-    """Get summary analytics for all predictions."""
-    total_predictions = db.query(SavingsPrediction).count()
+    total_predictions = db.query(PredictionResult).count()
     total_data_centers = db.query(DataCenter).count()
     total_carbon_credits = db.query(CarbonCredit).count()
     total_heat_sinks = db.query(HeatSink).count()
     
     # Calculate average metrics
-    avg_savings = db.query(func.avg(SavingsPrediction.annual_savings)).scalar() or 0
-    avg_roi = db.query(func.avg(SavingsPrediction.roi_percentage)).scalar() or 0
-    avg_payback = db.query(func.avg(SavingsPrediction.payback_period_years)).scalar() or 0
+    avg_savings = db.query(func.avg(PredictionResult.annual_savings)).scalar() or 0
+    avg_roi = db.query(func.avg(PredictionResult.internal_rate_return)).scalar() or 0
+    avg_payback = db.query(func.avg(PredictionResult.payback_period_years)).scalar() or 0
     
     return {
         "summary": {
@@ -521,7 +553,6 @@ async def get_prediction_analytics(db: Session = Depends(get_db)):
 # Health check for prediction system
 @router.get("/health")
 async def prediction_health_check():
-    """Health check for prediction system."""
     return {
         "status": "healthy",
         "service": "Data Center Savings Prediction API",

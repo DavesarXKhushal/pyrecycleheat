@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { Server, Zap, Building2 } from 'lucide-react';
-import { createRoot } from 'react-dom/client';
-import DataCenterPopup from './DataCenterPopup';
-import MapControls from './MapControls';
-import { api } from '@/services/api';
-import type { HeatCenter, DemandSite, MapMarker, DataCenter } from '@/types';
-import type { DataCenter as ApiDataCenter } from '@/services/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader } from '@googlemaps/js-api-loader';
+import { api } from '../services/api';
+import type { HeatCenter, DemandSite, DataCenter } from '../services/api';
+import type { MapMarker } from '../types';
 
-/**
- * Legacy interface maintained for backward compatibility with existing popup components
- * TODO: Refactor to use unified data types across the application
- */
 interface LegacyDataCenter {
   id: number;
   name: string;
@@ -30,722 +21,423 @@ interface MapComponentProps {
   searchQuery?: string;
 }
 
-/**
- * Main map component that renders an interactive map of San Francisco
- * showing heat centers and demand sites with 3D visualization capabilities
- */
-const MapComponent = ({ searchQuery }: MapComponentProps) => {
-  // Map instance and container references
+const MapComponent: React.FC<MapComponentProps> = ({ searchQuery }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
-  const popupRef = useRef<maplibregl.Popup | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   
-  // Component state management
   const [selectedDataCenter, setSelectedDataCenter] = useState<LegacyDataCenter | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [is3D, setIs3D] = useState(true);
   const [heatCenters, setHeatCenters] = useState<HeatCenter[]>([]);
   const [demandSites, setDemandSites] = useState<DemandSite[]>([]);
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
-  // San Francisco geographical bounds for map constraints
-  const SF_BOUNDS: maplibregl.LngLatBoundsLike = [
-    [-122.55, 37.7], // Southwest corner
-    [-121.9, 37.85]  // Northeast corner
-  ];
+  const SF_CENTER = { lat: 37.7749, lng: -122.4194 };
+  const SF_BOUNDS = {
+    north: 37.85,
+    south: 37.7,
+    east: -121.9,
+    west: -122.55
+  };
 
-  /**
-   * Initialize the map when component mounts
-   * Sets up the base map with San Francisco focus and 3D terrain
-   */
+  // Initialize Google Maps
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || mapLoaded) return;
 
-    // Initialize MapLibre GL map instance
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          // OpenStreetMap tiles for base map layer
-          'osm-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors'
+    const initMap = async () => {
+      try {
+        const loader = new Loader({
+          apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+          version: 'weekly',
+          libraries: ['places', 'geometry']
+        });
+
+        await loader.load();
+
+        if (!mapContainer.current) return;
+
+        map.current = new google.maps.Map(mapContainer.current, {
+          center: SF_CENTER,
+          zoom: 12,
+          mapTypeId: is3D ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
+          tilt: is3D ? 45 : 0,
+          heading: is3D ? -17.6 : 0,
+          restriction: {
+            latLngBounds: SF_BOUNDS,
+            strictBounds: false
           },
-          // Terrain data for 3D elevation effects
-          'terrain': {
-            type: 'raster-dem',
-            url: 'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=demo',
-            tileSize: 256
-          }
-        },
-        layers: [
-          {
-            id: 'osm-tiles',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 19,
-            paint: {
-              // Subtle styling adjustments for better visual appeal
-              'raster-contrast': 0.1,
-              'raster-saturation': 0.8,
-              'raster-brightness-min': 0.4,
-              'raster-brightness-max': 1.0,
-              'raster-hue-rotate': 5
+          styles: [
+            {
+              featureType: 'poi',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
+            },
+            {
+              featureType: 'transit',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
             }
-          }
-        ],
-        // Enable 3D terrain with moderate exaggeration
-        terrain: {
-          source: 'terrain',
-          exaggeration: 1.2
-        }
-      },
-      // Center on San Francisco with appropriate zoom level
-      center: [-122.4194, 37.7749],
-      zoom: 12,
-      // 3D view settings - pitch and bearing for dramatic effect
-      pitch: is3D ? 60 : 0,
-      bearing: is3D ? -15 : 0,
-      // Constrain map to San Francisco area
-      maxBounds: SF_BOUNDS,
-      maxZoom: 18,
-      minZoom: 10
-    });
-
-    // Add navigation controls with compass and zoom buttons
-    map.current.addControl(
-      new maplibregl.NavigationControl({
-        showCompass: true,
-        showZoom: true,
-        visualizePitch: true,
-      }),
-      'top-right'
-    );
-
-    // Set up 3D buildings and additional map features once map loads
-    map.current.on('load', () => {
-      if (!map.current) return;
-
-      // Add 3D building data source
-      map.current.addSource('sf-buildings', {
-        type: 'vector',
-        url: 'https://api.maptiler.com/tiles/buildings-3d/tiles.json?key=demo'
-      });
-
-      // Base building layer with subtle styling
-      map.current.addLayer({
-        id: 'building-base',
-        source: 'sf-buildings',
-        'source-layer': 'building',
-        type: 'fill',
-        paint: {
-          'fill-color': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            12, 'hsl(210, 15%, 92%)', // Light gray at lower zoom
-            16, 'hsl(210, 20%, 95%)'  // Slightly lighter at higher zoom
           ],
-          'fill-opacity': 0.8
-        }
-      });
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          zoomControl: true
+        });
 
-      // 3D building extrusions for depth and realism
-      map.current.addLayer({
-        id: '3d-buildings',
-        source: 'sf-buildings',
-        'source-layer': 'building',
-        type: 'fill-extrusion',
-        minzoom: 13,
-        layout: {
-          'visibility': is3D ? 'visible' : 'none'
-        },
-        paint: {
-          'fill-extrusion-color': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            13, 'hsl(210, 25%, 88%)',
-            15, 'hsl(210, 30%, 90%)',
-            17, 'hsl(210, 35%, 92%)'
-          ],
-          'fill-extrusion-height': [
-            'case',
-            ['has', 'height'],
-            ['*', ['get', 'height'], 1.2],
-            ['*', ['get', 'levels'], 4]
-          ],
-          'fill-extrusion-opacity': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            13, 0.9,
-            16, 0.95
-          ],
-          'fill-extrusion-base': 0
-        }
-      });
-
-      // Initial marker setup will be handled by the data loading effect
-    });
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
+        setMapLoaded(true);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading Google Maps:', error);
+        setError('Failed to load Google Maps');
+        setIsLoading(false);
       }
     };
-  }, []);
 
-  /**
-   * Load heat centers and demand sites data from the backend API
-   * Handles loading states and error management
-   */
+    initMap();
+  }, [is3D, mapLoaded]);
+
+  // Load data from API
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch all data types concurrently for better performance
-        const [heatCentersData, demandSitesData, dataCentersData] = await Promise.all([
-          api.heatCenters.getAll(),
-          api.demandSites.getAll(),
-          api.dataCenters.getAll()
+        const [dataCentersResponse, heatCentersResponse, demandSitesResponse] = await Promise.all([
+          api.dataCenters.getAll(),
+          fetch('/api/heat-centers').catch(() => ({ json: () => [] })),
+          fetch('/api/demand-sites').catch(() => ({ json: () => [] }))
         ]);
+
+        setDataCenters(dataCentersResponse);
         
-        setHeatCenters(heatCentersData);
-        setDemandSites(demandSitesData);
-        
-        // Transform API data centers to legacy format for compatibility
-        const transformedDataCenters: DataCenter[] = dataCentersData.map(dc => ({
-          id: dc.id,
-          name: dc.name,
-          description: `${dc.dc_type || 'Data Center'} - ${dc.total_it_load_kw || 0}kW IT Load`,
-          latitude: dc.location_lat,
-          longitude: dc.location_lng,
-          provider: 'Enterprise',
-          capacity: `${dc.total_it_load_kw || 0}kW`,
-          established: '2024',
-          website: '',
-          address: dc.address || ''
-        }));
-        
-        setDataCenters(transformedDataCenters);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        setError('Failed to load data from backend');
-      } finally {
-        setLoading(false);
+        // Mock data for heat centers and demand sites if API doesn't exist
+        setHeatCenters([
+          {
+            id: 1,
+            name: 'Mission Bay Heat Center',
+            latitude: 37.7706,
+            longitude: -122.3892,
+            capacity: '50MW',
+            type: 'geothermal',
+            status: 'active'
+          },
+          {
+            id: 2,
+            name: 'SOMA District Heat',
+            latitude: 37.7749,
+            longitude: -122.4194,
+            capacity: '75MW',
+            type: 'waste_heat',
+            status: 'active'
+          }
+        ]);
+
+        setDemandSites([
+          {
+            id: 1,
+            name: 'Financial District',
+            latitude: 37.7946,
+            longitude: -122.4014,
+            demand: '25MW',
+            type: 'commercial',
+            status: 'connected'
+          },
+          {
+            id: 2,
+            name: 'Union Square',
+            latitude: 37.7880,
+            longitude: -122.4074,
+            demand: '15MW',
+            type: 'mixed',
+            status: 'potential'
+          }
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Failed to load map data');
       }
     };
 
     loadData();
   }, []);
 
-  /**
-   * Add markers to the map once data is loaded and map is ready
-   * This effect runs whenever the data changes or loading state updates
-   */
+  // Create markers when map is loaded and data is available
   useEffect(() => {
-    if (!loading && !error && map.current) {
-      addAllMarkers();
-    }
-  }, [heatCenters, demandSites, dataCenters, loading, error]);
-
-  /**
-   * Creates a visually appealing heat center marker with liquid glass effect
-   * Features hover animations, status indicators, and click handlers
-   * @param heatCenter - The heat center data to create a marker for
-   * @returns HTML element for the marker
-   */
-  const createHeatCenterMarkerElement = (heatCenter: HeatCenter) => {
-    const el = document.createElement('div');
-    el.className = 'cursor-pointer transform transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:rotate-1';
-    
-    // Complex HTML structure for liquid glass effect with multiple layers
-    el.innerHTML = `
-      <div class="relative group">
-        <!-- Main liquid glass container with backdrop blur -->
-        <div class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/30 backdrop-blur-xl" 
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1)); 
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);">
-          
-          <!-- Multi-layer glass effects for depth -->
-          <div class="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl"></div>
-          <div class="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-2xl"></div>
-          
-          <!-- Top highlight for glass reflection -->
-          <div class="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          <div class="absolute top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-          
-          <!-- Hover glow effect -->
-          <div class="absolute inset-0 bg-gradient-to-r from-red-400/20 to-orange-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-          
-          <!-- Inner heat glow for thematic consistency -->
-          <div class="absolute inset-2 bg-gradient-to-br from-red-400/10 to-orange-600/5 rounded-xl opacity-60"></div>
-          
-          <!-- Zap icon representing heat/energy -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
-               class="relative z-10 text-gray-700 group-hover:text-red-700 transition-all duration-300 group-hover:scale-110">
-            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
-          </svg>
-          
-          <!-- Status indicator - green for active, red for inactive -->
-          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white/50 backdrop-blur-sm animate-pulse"
-               style="background: linear-gradient(135deg, ${heatCenter.is_active ? 'rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.8)'});"></div>
-        </div>
-        
-        <!-- Enhanced pointer with liquid glass effect -->
-        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rotate-45 border border-white/40 backdrop-blur-sm"
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
-                    backdrop-filter: blur(10px);
-                    -webkit-backdrop-filter: blur(10px);"></div>
-      </div>
-    `;
-
-    // Add click handler to show popup with marker details
-    el.addEventListener('click', () => {
-       const marker: MapMarker = {
-         id: heatCenter.id,
-         name: heatCenter.name,
-         type: 'heat_center',
-         latitude: heatCenter.location_lat,
-         longitude: heatCenter.location_lng,
-         status: heatCenter.is_active ? 'active' : 'inactive',
-         data: heatCenter
-       };
-       setSelectedMarker(marker);
-       showPopup(marker);
-     });
-
-    return el;
-  };
-
-  /**
-   * Creates a data center marker with server-themed styling
-   * Similar structure to other markers but with data center specific visual theme
-   * @param dataCenter - The data center data to create a marker for
-   * @returns HTML element for the marker
-   */
-  const createDataCenterMarkerElement = (dataCenter: DataCenter) => {
-    const el = document.createElement('div');
-    el.className = 'cursor-pointer transform transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:rotate-1';
-    el.innerHTML = `
-      <div class="relative group">
-        <!-- Main liquid glass container -->
-        <div class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/30 backdrop-blur-xl" 
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1)); 
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);">
-          
-          <!-- Multi-layer glass effects -->
-          <div class="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl"></div>
-          <div class="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-2xl"></div>
-          
-          <!-- Top highlight -->
-          <div class="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          <div class="absolute top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-          
-          <!-- Hover glow effect -->
-          <div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-          
-          <!-- Inner data center glow -->
-          <div class="absolute inset-2 bg-gradient-to-br from-purple-400/10 to-indigo-600/5 rounded-xl opacity-60"></div>
-          
-          <!-- Server icon for data center -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
-               class="relative z-10 text-gray-700 group-hover:text-purple-700 transition-all duration-300 group-hover:scale-110">
-            <rect width="20" height="8" x="2" y="2" rx="2" ry="2"/>
-            <rect width="20" height="8" x="2" y="14" rx="2" ry="2"/>
-            <line x1="6" x2="6.01" y1="6" y2="6"/>
-            <line x1="6" x2="6.01" y1="18" y2="18"/>
-          </svg>
-          
-          <!-- Status indicator - always active for data centers -->
-          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white/50 backdrop-blur-sm animate-pulse"
-               style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(126, 34, 206, 0.8));"></div>
-        </div>
-        
-        <!-- Enhanced pointer with liquid glass -->
-        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rotate-45 border border-white/40 backdrop-blur-sm"
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
-                    backdrop-filter: blur(10px);
-                    -webkit-backdrop-filter: blur(10px);"></div>
-      </div>
-    `;
-
-    el.addEventListener('click', () => {
-      showDataCenterPopup(dataCenter);
-    });
-
-    return el;
-  };
-
-  /**
-   * Creates a demand site marker with building-themed styling
-   * Similar structure to heat center markers but with different visual theme
-   * @param demandSite - The demand site data to create a marker for
-   * @returns HTML element for the marker
-   */
-  const createDemandSiteMarkerElement = (demandSite: DemandSite) => {
-    const el = document.createElement('div');
-    el.className = 'cursor-pointer transform transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:rotate-1';
-    el.innerHTML = `
-      <div class="relative group">
-        <!-- Main liquid glass container -->
-        <div class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/30 backdrop-blur-xl" 
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1)); 
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);">
-          
-          <!-- Multi-layer glass effects -->
-          <div class="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl"></div>
-          <div class="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-2xl"></div>
-          
-          <!-- Top highlight -->
-          <div class="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          <div class="absolute top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-          
-          <!-- Hover glow effect -->
-          <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-cyan-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-          
-          <!-- Inner demand glow -->
-          <div class="absolute inset-2 bg-gradient-to-br from-blue-400/10 to-cyan-600/5 rounded-xl opacity-60"></div>
-          
-          <!-- Building icon for demand site -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
-               class="relative z-10 text-gray-700 group-hover:text-blue-700 transition-all duration-300 group-hover:scale-110">
-            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-            <path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/>
-            <path d="M10 6h4"/>
-            <path d="M10 10h4"/>
-            <path d="M10 14h4"/>
-            <path d="M10 18h4"/>
-          </svg>
-          
-          <!-- Status indicator -->
-          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white/50 backdrop-blur-sm animate-pulse"
-               style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.8));"></div>
-        </div>
-        
-        <!-- Enhanced pointer with liquid glass -->
-        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rotate-45 border border-white/40 backdrop-blur-sm"
-             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
-                    backdrop-filter: blur(10px);
-                    -webkit-backdrop-filter: blur(10px);"></div>
-      </div>
-    `;
-
-    el.addEventListener('click', () => {
-       const marker: MapMarker = {
-         id: demandSite.id,
-         name: demandSite.name,
-         type: 'demand_site',
-         latitude: demandSite.location_lat,
-         longitude: demandSite.location_lng,
-         status: demandSite.is_connected ? 'connected' : 'disconnected',
-         data: demandSite
-       };
-       setSelectedMarker(marker);
-       showPopup(marker);
-     });
-
-    return el;
-  };
-
-  const addAllMarkers = () => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
 
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
-    // Add heat center markers
-     heatCenters.forEach((heatCenter: HeatCenter) => {
-       const el = createHeatCenterMarkerElement(heatCenter);
-       const marker = new maplibregl.Marker({
-         element: el,
-         anchor: 'bottom'
-       })
-         .setLngLat([heatCenter.location_lng, heatCenter.location_lat])
-         .addTo(map.current!);
-
-       markersRef.current.push(marker);
-     });
-
-     // Add demand site markers
-     demandSites.forEach((demandSite: DemandSite) => {
-       const el = createDemandSiteMarkerElement(demandSite);
-       const marker = new maplibregl.Marker({
-         element: el,
-         anchor: 'bottom'
-       })
-         .setLngLat([demandSite.location_lng, demandSite.location_lat])
-         .addTo(map.current!);
-
-       markersRef.current.push(marker);
-     });
-
-     // Add data center markers
-     dataCenters.forEach((dataCenter: DataCenter) => {
-       const el = createDataCenterMarkerElement(dataCenter);
-       const marker = new maplibregl.Marker({
-         element: el,
-         anchor: 'bottom'
-       })
-         .setLngLat([dataCenter.longitude, dataCenter.latitude])
-         .addTo(map.current!);
-
-       markersRef.current.push(marker);
-     });
-  };
-
-  const showPopup = (marker: MapMarker) => {
-    if (!map.current) return;
-
-    if (popupRef.current) {
-      popupRef.current.remove();
-    }
-
-    const popupEl = document.createElement('div');
-    const root = createRoot(popupEl);
-    
-    root.render(
-      <DataCenterPopup
-        marker={marker}
-        onClose={() => {
-          if (popupRef.current) {
-            popupRef.current.remove();
-            popupRef.current = null;
-          }
-          setSelectedMarker(null);
-        }}
-      />
-    );
-
-    // Calculate smart positioning to prevent overflow
-    const markerPoint = map.current.project([marker.data.location_lng, marker.data.location_lat]);
-    const mapContainer = map.current.getContainer();
-    const containerWidth = mapContainer.offsetWidth;
-    const containerHeight = mapContainer.offsetHeight;
-    
-    // Determine best anchor position based on marker location
-    let anchor: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom';
-    let offset: [number, number] = [0, -10];
-    
-    // Check if marker is in the top half of the screen
-    if (markerPoint.y < containerHeight * 0.4) {
-      // Check if marker is on the left or right side
-      if (markerPoint.x < containerWidth * 0.3) {
-        anchor = 'bottom-right';
-        offset = [-10, -10];
-      } else if (markerPoint.x > containerWidth * 0.7) {
-        anchor = 'bottom-left';
-        offset = [10, -10];
-      } else {
-        anchor = 'top';
-        offset = [0, 10];
-      }
-    } else if (markerPoint.y > containerHeight * 0.6) {
-      // Marker is in bottom half - use bottom anchor but check sides
-      if (markerPoint.x < containerWidth * 0.3) {
-        anchor = 'top-right';
-        offset = [-10, 10];
-      } else if (markerPoint.x > containerWidth * 0.7) {
-        anchor = 'top-left';
-        offset = [10, 10];
-      } else {
-        anchor = 'bottom';
-        offset = [0, -10];
-      }
-    } else {
-      // Marker is in middle vertically - check horizontal position
-      if (markerPoint.x < containerWidth * 0.25) {
-        anchor = 'left';
-        offset = [10, 0];
-      } else if (markerPoint.x > containerWidth * 0.75) {
-        anchor = 'right';
-        offset = [-10, 0];
-      } else {
-        anchor = 'bottom';
-        offset = [0, -10];
-      }
-    }
-
-    popupRef.current = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: offset,
-      className: 'data-center-popup',
-      maxWidth: '90vw',
-      anchor: anchor
-    })
-      .setLngLat([marker.data.location_lng, marker.data.location_lat])
-      .setDOMContent(popupEl)
-      .addTo(map.current);
-
-    setSelectedMarker(marker);
-  };
-
-  const showDataCenterPopup = (dataCenter: DataCenter) => {
-    if (!map.current) return;
-
-    if (popupRef.current) {
-      popupRef.current.remove();
-    }
-
-    const popupEl = document.createElement('div');
-    const root = createRoot(popupEl);
-    
-    root.render(
-      <DataCenterPopup
-        dataCenter={dataCenter}
-        onClose={() => {
-          if (popupRef.current) {
-            popupRef.current.remove();
-            popupRef.current = null;
-          }
-          setSelectedDataCenter(null);
-        }}
-      />
-    );
-
-    // Calculate smart positioning to prevent overflow
-    const markerPoint = map.current.project([dataCenter.longitude, dataCenter.latitude]);
-    const mapContainer = map.current.getContainer();
-    const containerWidth = mapContainer.offsetWidth;
-    const containerHeight = mapContainer.offsetHeight;
-    
-    // Determine best anchor position based on marker location
-    let anchor: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom';
-    let offset: [number, number] = [0, -10];
-    
-    // Check if marker is in the top half of the screen
-    if (markerPoint.y < containerHeight * 0.4) {
-      // Check if marker is on the left or right side
-      if (markerPoint.x < containerWidth * 0.3) {
-        anchor = 'bottom-right';
-        offset = [-10, -10];
-      } else if (markerPoint.x > containerWidth * 0.7) {
-        anchor = 'bottom-left';
-        offset = [10, -10];
-      } else {
-        anchor = 'top';
-        offset = [0, 10];
-      }
-    } else if (markerPoint.y > containerHeight * 0.6) {
-      // Marker is in bottom half - use bottom anchor but check sides
-      if (markerPoint.x < containerWidth * 0.3) {
-        anchor = 'top-right';
-        offset = [-10, 10];
-      } else if (markerPoint.x > containerWidth * 0.7) {
-        anchor = 'top-left';
-        offset = [10, 10];
-      } else {
-        anchor = 'bottom';
-        offset = [0, -10];
-      }
-    } else {
-      // Marker is in middle vertically - check horizontal position
-      if (markerPoint.x < containerWidth * 0.25) {
-        anchor = 'left';
-        offset = [10, 0];
-      } else if (markerPoint.x > containerWidth * 0.75) {
-        anchor = 'right';
-        offset = [-10, 0];
-      } else {
-        anchor = 'bottom';
-        offset = [0, -10];
-      }
-    }
-
-    popupRef.current = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: offset,
-      className: 'data-center-popup',
-      maxWidth: '90vw',
-      anchor: anchor
-    })
-      .setLngLat([dataCenter.longitude, dataCenter.latitude])
-      .setDOMContent(popupEl)
-      .addTo(map.current);
-
-    setSelectedDataCenter(dataCenter);
-  };
-
-  useEffect(() => {
-    if (!searchQuery) {
-      markersRef.current.forEach(marker => {
-        marker.getElement().style.display = 'block';
+    // Create data center markers
+    dataCenters.forEach(dataCenter => {
+      const marker = new google.maps.Marker({
+        position: { lat: dataCenter.location_lat, lng: dataCenter.location_lng },
+        map: map.current,
+        title: dataCenter.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#3B82F6',
+          fillOpacity: 0.8,
+          strokeColor: '#1E40AF',
+          strokeWeight: 2
+        }
       });
-      return;
-    }
 
-    const query = searchQuery.toLowerCase();
-    markersRef.current.forEach((marker, index) => {
-      // Create combined array of all markers in the same order they were added
-      const allMarkers = [...heatCenters, ...demandSites, ...dataCenters];
-      const markerData = allMarkers[index];
-      
-      let matches = false;
-      if (markerData) {
-        // Check if it's a data center (has different structure)
-        if ('provider' in markerData) {
-          const dataCenter = markerData as DataCenter;
-          matches = 
-            dataCenter.name.toLowerCase().includes(query) ||
-            dataCenter.provider.toLowerCase().includes(query) ||
-            dataCenter.description.toLowerCase().includes(query);
-        } else {
-          // Heat center or demand site
-          matches = markerData.name.toLowerCase().includes(query);
+      marker.addListener('click', () => {
+        const legacyDataCenter: LegacyDataCenter = {
+          id: dataCenter.id,
+          name: dataCenter.name,
+          description: `IT Load: ${dataCenter.total_it_load_kw}kW, PUE: ${dataCenter.pue}`,
+          latitude: dataCenter.location_lat,
+          longitude: dataCenter.location_lng,
+          provider: 'Enterprise',
+          capacity: `${dataCenter.total_it_load_kw}kW`,
+          established: new Date(dataCenter.created_at || '2024-01-01').getFullYear().toString(),
+          address: dataCenter.address || `${dataCenter.location_lat.toFixed(4)}, ${dataCenter.location_lng.toFixed(4)}`
+        };
+        
+        setSelectedDataCenter(legacyDataCenter);
+        
+        if (infoWindowRef.current) {
+          infoWindowRef.current.close();
         }
-      }
-      
-      marker.getElement().style.display = matches ? 'block' : 'none';
+        
+        infoWindowRef.current = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; max-width: 250px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+                ${dataCenter.name}
+              </h3>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>IT Load:</strong> ${dataCenter.total_it_load_kw}kW
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>PUE:</strong> ${dataCenter.pue}
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Created:</strong> ${new Date(dataCenter.created_at || '2024-01-01').toLocaleDateString()}
+              </p>
+            </div>
+          `
+        });
+        
+        infoWindowRef.current.open(map.current, marker);
+      });
+
+      markersRef.current.push(marker);
     });
-  }, [searchQuery, heatCenters, demandSites, dataCenters]);
 
-  const handle3DToggle = (newIs3D: boolean) => {
-    setIs3D(newIs3D);
-    if (map.current) {
-      if (newIs3D) {
-        map.current.easeTo({
-          pitch: 60,
-          bearing: -15,
-          duration: 1000
-        });
-        if (map.current.getLayer('3d-buildings')) {
-          map.current.setLayoutProperty('3d-buildings', 'visibility', 'visible');
+    // Create heat center markers
+    heatCenters.forEach(heatCenter => {
+      const marker = new google.maps.Marker({
+        position: { lat: heatCenter.latitude, lng: heatCenter.longitude },
+        map: map.current,
+        title: heatCenter.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#EF4444',
+          fillOpacity: 0.8,
+          strokeColor: '#DC2626',
+          strokeWeight: 2
         }
-      } else {
-        map.current.easeTo({
-          pitch: 0,
-          bearing: 0,
-          duration: 1000
+      });
+
+      marker.addListener('click', () => {
+        if (infoWindowRef.current) {
+          infoWindowRef.current.close();
+        }
+        
+        infoWindowRef.current = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; max-width: 250px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+                ${heatCenter.name}
+              </h3>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Type:</strong> ${heatCenter.type}
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Capacity:</strong> ${heatCenter.capacity}
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Status:</strong> ${heatCenter.status}
+              </p>
+            </div>
+          `
         });
-        if (map.current.getLayer('3d-buildings')) {
-          map.current.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        
+        infoWindowRef.current.open(map.current, marker);
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    // Create demand site markers
+    demandSites.forEach(demandSite => {
+      const marker = new google.maps.Marker({
+        position: { lat: demandSite.latitude, lng: demandSite.longitude },
+        map: map.current,
+        title: demandSite.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#10B981',
+          fillOpacity: 0.8,
+          strokeColor: '#059669',
+          strokeWeight: 2
+        }
+      });
+
+      marker.addListener('click', () => {
+        if (infoWindowRef.current) {
+          infoWindowRef.current.close();
+        }
+        
+        infoWindowRef.current = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; max-width: 250px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+                ${demandSite.name}
+              </h3>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Type:</strong> ${demandSite.type}
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Demand:</strong> ${demandSite.demand}
+              </p>
+              <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                <strong>Status:</strong> ${demandSite.status}
+              </p>
+            </div>
+          `
+        });
+        
+        infoWindowRef.current.open(map.current, marker);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [mapLoaded, dataCenters, heatCenters, demandSites]);
+
+  // Handle search functionality
+  useEffect(() => {
+    if (!searchQuery || !map.current || !mapLoaded) return;
+
+    const searchService = new google.maps.places.PlacesService(map.current);
+    
+    const request = {
+      query: searchQuery,
+      bounds: SF_BOUNDS,
+      fields: ['name', 'geometry', 'formatted_address']
+    };
+
+    searchService.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+        const place = results[0];
+        if (place.geometry && place.geometry.location) {
+          map.current?.setCenter(place.geometry.location);
+          map.current?.setZoom(15);
         }
       }
+    });
+  }, [searchQuery, mapLoaded]);
+
+  const toggle3D = useCallback(() => {
+    if (!map.current) return;
+    
+    const new3D = !is3D;
+    setIs3D(new3D);
+    
+    if (new3D) {
+      map.current.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+      map.current.setTilt(45);
+      map.current.setHeading(-17.6);
+    } else {
+      map.current.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+      map.current.setTilt(0);
+      map.current.setHeading(0);
     }
-  };
+  }, [is3D]);
+
+  const resetView = useCallback(() => {
+    if (!map.current) return;
+    
+    map.current.setCenter(SF_CENTER);
+    map.current.setZoom(12);
+    
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+    }
+    setSelectedDataCenter(null);
+  }, []);
+
+  if (error) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-gray-100">
+        <div className="text-center p-8">
+          <MapPin className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Map Error</h3>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative w-full h-screen">
-      <div ref={mapContainer} className="absolute inset-0" />
-      <MapControls onToggle3D={handle3DToggle} />
+    <div className="h-full w-full relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading Google Maps...</p>
+          </div>
+        </div>
+      )}
+      
+      <div ref={mapContainer} className="h-full w-full" />
+      
+      {mapLoaded && (
+        <>
+          <MapControls
+            is3D={is3D}
+            onToggle3D={toggle3D}
+            onResetView={resetView}
+            selectedMarker={selectedMarker}
+          />
+          
+          {selectedDataCenter && (
+            <DataCenterPopup
+              dataCenter={selectedDataCenter}
+              onClose={() => setSelectedDataCenter(null)}
+            />
+          )}
+          
+          {/* Legend */}
+          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-xs">
+            <h4 className="font-semibold text-gray-900 mb-3">Map Legend</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-gray-700">Data Centers ({dataCenters.length})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <span className="text-gray-700">Heat Centers ({heatCenters.length})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-gray-700">Demand Sites ({demandSites.length})</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

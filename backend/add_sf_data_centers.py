@@ -120,69 +120,42 @@ DATA_CENTERS = [
     }
 ]
 
-def add_data_center(data_center: Dict) -> bool:
-    """Add a single data center to the database via API"""
-    try:
-        response = requests.post(
-            f"{BASE_URL}/api/v1/predictions/data-centers",
-            json=data_center,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"✅ Successfully added: {data_center['name']} (ID: {result['id']})")
-            return True
-        else:
-            print(f"❌ Failed to add {data_center['name']}: {response.status_code}")
-            print(f"   Error: {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error adding {data_center['name']}: {str(e)}")
-        return False
+def add_data_center(data_center_data):
+    response = requests.post(f"{BASE_URL}/api/v1/predictions/data-centers", json=data_center_data)
+    if response.status_code == 200:
+        print(f"✓ Added: {data_center_data['name']}")
+        return response.json()
+    else:
+        print(f"✗ Failed to add {data_center_data['name']}: {response.text}")
+        return None
 
-def check_existing_data_centers() -> List[Dict]:
-    """Check what data centers already exist"""
+def check_existing_data_centers():
     try:
         response = requests.get(f"{BASE_URL}/api/v1/predictions/data-centers")
         if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to fetch existing data centers: {response.status_code}")
-            return []
+            existing = response.json()
+            print(f"Found {len(existing)} existing data centers")
+            return [dc['name'] for dc in existing]
+        return []
     except Exception as e:
-        print(f"Error fetching existing data centers: {str(e)}")
+        print(f"Error checking existing data centers: {e}")
         return []
 
 def main():
-    """Main function to add all data centers"""
-    print("🏢 Adding San Francisco Data Centers to Database")
-    print("=" * 50)
+    print("Adding San Francisco Data Centers...")
     
-    # Check existing data centers
-    print("📋 Checking existing data centers...")
-    existing = check_existing_data_centers()
-    existing_names = [dc.get('name', '') for dc in existing]
-    print(f"   Found {len(existing)} existing data centers")
-    
-    # Add new data centers
+    existing_names = check_existing_data_centers()
     added_count = 0
-    skipped_count = 0
     
-    for dc in DATA_CENTERS:
-        if dc['name'] in existing_names:
-            print(f"⏭️  Skipping {dc['name']} (already exists)")
-            skipped_count += 1
-        else:
-            if add_data_center(dc):
+    for dc_data in DATA_CENTERS:
+        if dc_data['name'] not in existing_names:
+            result = add_data_center(dc_data)
+            if result:
                 added_count += 1
+        else:
+            print(f"⚠ Skipped: {dc_data['name']} (already exists)")
     
-    print("\n" + "=" * 50)
-    print(f"📊 Summary:")
-    print(f"   ✅ Added: {added_count} data centers")
-    print(f"   ⏭️  Skipped: {skipped_count} data centers (already exist)")
-    print(f"   📍 Total in database: {len(existing) + added_count}")
+    print(f"\nCompleted! Added {added_count} new data centers.")
     
     if added_count > 0:
         print("\n🗺️  New data centers should now appear on the map!")

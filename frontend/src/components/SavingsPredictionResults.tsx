@@ -1,98 +1,35 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Zap, 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Leaf, 
-  Clock, 
-  MapPin, 
-  Thermometer,
-  BarChart3,
-  PieChart,
-  Calculator,
-  Target
-} from 'lucide-react';
+import { DollarSign, TrendingUp, Zap, Leaf, Calculator, Clock } from 'lucide-react';
 
-interface SavingsPredictionResultsProps {
-  prediction: SavingsPredictionResult;
-  isLoading?: boolean;
-}
-
-export interface SavingsPredictionResult {
-  // Basic Information
-  data_center_name: string;
-  prediction_date: string;
-  scenario_name: string;
-  
-  // Energy Metrics
-  annual_energy_consumption_mwh: number;
-  energy_cost_per_year: number;
-  energy_savings_mwh: number;
-  energy_savings_percentage: number;
-  
-  // Carbon Metrics
-  annual_co2_emissions_tons: number;
-  co2_reduction_tons: number;
-  co2_reduction_percentage: number;
-  carbon_credit_cost: number;
-  
-  // Financial Metrics
-  total_capex: number;
-  annual_opex: number;
-  annual_savings: number;
-  net_present_value: number;
-  return_on_investment: number;
+interface PredictionResult {
+  annual_energy_savings_mwh: number;
+  annual_cost_savings_usd: number;
+  co2_reduction_tons_per_year: number;
+  heat_recovery_potential_mwh: number;
+  roi_percent: number;
   payback_period_years: number;
-  
-  // Heat Recovery
-  recoverable_heat_mw: number;
-  heat_utilization_percentage: number;
-  nearest_heat_sink_distance_km: number;
-  heat_sink_name?: string;
-  
-  // Yearly Breakdown (first 10 years)
-  yearly_breakdown: Array<{
-    year: number;
-    energy_cost: number;
-    energy_savings: number;
-    carbon_cost: number;
-    net_savings: number;
-    cumulative_savings: number;
-  }>;
-  
-  // Sensitivity Analysis
-  sensitivity_analysis?: {
-    energy_price_impact: number;
-    carbon_price_impact: number;
-    efficiency_impact: number;
+  npv_usd: number;
+  formulas_used: {
+    energy_savings: string;
+    cost_savings: string;
+    co2_reduction: string;
+    heat_recovery: string;
+    roi: string;
+    payback_period: string;
+    npv: string;
   };
 }
 
-const SavingsPredictionResults: React.FC<SavingsPredictionResultsProps> = ({
-  prediction,
-  isLoading = false
-}) => {
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-6xl mx-auto space-y-6">
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-lg">Calculating savings prediction...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+interface SavingsPredictionResultsProps {
+  results: PredictionResult;
+  isLoading?: boolean;
+}
 
-  const formatCurrency = (amount: number): string => {
+const SavingsPredictionResults: React.FC<SavingsPredictionResultsProps> = ({ 
+  results, 
+  isLoading = false 
+}) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -101,393 +38,155 @@ const SavingsPredictionResults: React.FC<SavingsPredictionResultsProps> = ({
     }).format(amount);
   };
 
-  const formatNumber = (num: number, decimals: number = 1): string => {
+  const formatNumber = (num: number, decimals: number = 1) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     }).format(num);
   };
 
-  const getROIColor = (roi: number): string => {
-    if (roi >= 20) return 'text-green-600';
-    if (roi >= 10) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getPaybackColor = (years: number): string => {
-    if (years <= 3) return 'text-green-600';
-    if (years <= 7) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+  if (isLoading) {
+    return (
+      <div className="bg-white/95 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <h2 className="text-xl font-semibold text-gray-900">Calculating Predictions...</h2>
+        </div>
+        <div className="space-y-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-gray-100 rounded-xl h-20 animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
-      {/* Header Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-6 w-6 text-blue-600" />
-            Savings Prediction Results
-          </CardTitle>
-          <CardDescription>
-            Analysis for {prediction.data_center_name} • Generated on {new Date(prediction.prediction_date).toLocaleDateString()}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(prediction.annual_savings)}
-              </div>
-              <div className="text-sm text-green-700">Annual Savings</div>
+    <div className="bg-white/95 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-white/10 pointer-events-none"></div>
+      <div className="absolute inset-[1px] bg-gradient-to-br from-white/30 via-white/10 to-transparent rounded-2xl pointer-events-none"></div>
+      <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-purple-400/5 to-cyan-400/5 pointer-events-none"></div>
+
+      <div className="relative z-10 p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Calculator className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900">Prediction Results</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-green-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl p-4 border border-green-200/50">
+            <div className="flex items-center space-x-2 mb-3">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-semibold text-gray-800">Annual Cost Savings</span>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                {formatNumber(prediction.return_on_investment)}%
-              </div>
-              <div className="text-sm text-blue-700">ROI</div>
+            <p className="text-2xl font-bold text-green-700">
+              {formatCurrency(results.annual_cost_savings_usd)}
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              {formatNumber(results.annual_energy_savings_mwh)} MWh energy saved
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200/50">
+            <div className="flex items-center space-x-2 mb-3">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-semibold text-gray-800">Return on Investment</span>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                {formatNumber(prediction.payback_period_years, 1)} years
-              </div>
-              <div className="text-sm text-purple-700">Payback Period</div>
+            <p className="text-2xl font-bold text-blue-700">
+              {formatNumber(results.roi_percent, 1)}%
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              Payback in {formatNumber(results.payback_period_years, 1)} years
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="flex items-center space-x-2 mb-2">
+              <Zap className="w-4 h-4 text-orange-600" />
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Energy Savings</span>
             </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">
-                {formatNumber(prediction.co2_reduction_tons)} tons
+            <p className="text-lg font-semibold text-gray-900">
+              {formatNumber(results.annual_energy_savings_mwh)} MWh/yr
+            </p>
+          </div>
+
+          <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="flex items-center space-x-2 mb-2">
+              <Leaf className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">CO₂ Reduction</span>
+            </div>
+            <p className="text-lg font-semibold text-gray-900">
+              {formatNumber(results.co2_reduction_tons_per_year)} tons/yr
+            </p>
+          </div>
+
+          <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="flex items-center space-x-2 mb-2">
+              <Zap className="w-4 h-4 text-red-600" />
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Heat Recovery</span>
+            </div>
+            <p className="text-lg font-semibold text-gray-900">
+              {formatNumber(results.heat_recovery_potential_mwh)} MWh/yr
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="flex items-center space-x-2 mb-2">
+              <Clock className="w-4 h-4 text-purple-600" />
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Payback Period</span>
+            </div>
+            <p className="text-lg font-semibold text-gray-900">
+              {formatNumber(results.payback_period_years, 1)} years
+            </p>
+          </div>
+
+          <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="flex items-center space-x-2 mb-2">
+              <DollarSign className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Net Present Value</span>
+            </div>
+            <p className="text-lg font-semibold text-gray-900">
+              {formatCurrency(results.npv_usd)}
+            </p>
+          </div>
+        </div>
+
+        {results.formulas_used && (
+          <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50">
+            <div className="flex items-center space-x-2 mb-3">
+              <Calculator className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Calculation Methods</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
+              <div>
+                <p className="font-medium text-gray-700 mb-1">Energy Savings:</p>
+                <p className="font-mono bg-white/50 p-2 rounded">{results.formulas_used.energy_savings}</p>
               </div>
-              <div className="text-sm text-orange-700">CO₂ Reduction/Year</div>
+              <div>
+                <p className="font-medium text-gray-700 mb-1">Cost Savings:</p>
+                <p className="font-mono bg-white/50 p-2 rounded">{results.formulas_used.cost_savings}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700 mb-1">CO₂ Reduction:</p>
+                <p className="font-mono bg-white/50 p-2 rounded">{results.formulas_used.co2_reduction}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700 mb-1">ROI:</p>
+                <p className="font-mono bg-white/50 p-2 rounded">{results.formulas_used.roi}</p>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Energy Analysis */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-600" />
-              Energy Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Annual Consumption</span>
-                <span className="font-semibold">{formatNumber(prediction.annual_energy_consumption_mwh)} MWh</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Energy Cost/Year</span>
-                <span className="font-semibold">{formatCurrency(prediction.energy_cost_per_year)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-green-700">Energy Savings</span>
-                <div className="text-right">
-                  <div className="font-semibold text-green-600">
-                    {formatNumber(prediction.energy_savings_mwh)} MWh
-                  </div>
-                  <div className="text-xs text-green-600">
-                    ({formatNumber(prediction.energy_savings_percentage)}% reduction)
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-2">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Energy Efficiency</span>
-                  <span>{formatNumber(prediction.energy_savings_percentage)}%</span>
-                </div>
-                <Progress value={prediction.energy_savings_percentage} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Carbon Impact */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Leaf className="h-5 w-5 text-green-600" />
-              Carbon Impact
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Current CO₂ Emissions</span>
-                <span className="font-semibold">{formatNumber(prediction.annual_co2_emissions_tons)} tons/year</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-green-700">CO₂ Reduction</span>
-                <div className="text-right">
-                  <div className="font-semibold text-green-600">
-                    {formatNumber(prediction.co2_reduction_tons)} tons/year
-                  </div>
-                  <div className="text-xs text-green-600">
-                    ({formatNumber(prediction.co2_reduction_percentage)}% reduction)
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Carbon Credit Cost</span>
-                <span className="font-semibold">{formatCurrency(prediction.carbon_credit_cost)}/year</span>
-              </div>
-              
-              <div className="pt-2">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Carbon Reduction</span>
-                  <span>{formatNumber(prediction.co2_reduction_percentage)}%</span>
-                </div>
-                <Progress value={prediction.co2_reduction_percentage} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              Financial Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Total CAPEX</span>
-                <span className="font-semibold">{formatCurrency(prediction.total_capex)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Annual OPEX</span>
-                <span className="font-semibold">{formatCurrency(prediction.annual_opex)}</span>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-green-700">Annual Savings</span>
-                <span className="font-semibold text-green-600">{formatCurrency(prediction.annual_savings)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Net Present Value</span>
-                <span className={`font-semibold ${prediction.net_present_value > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(prediction.net_present_value)}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-center p-3 bg-gray-50 rounded">
-                  <div className={`text-lg font-bold ${getROIColor(prediction.return_on_investment)}`}>
-                    {formatNumber(prediction.return_on_investment)}%
-                  </div>
-                  <div className="text-xs text-gray-600">ROI</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded">
-                  <div className={`text-lg font-bold ${getPaybackColor(prediction.payback_period_years)}`}>
-                    {formatNumber(prediction.payback_period_years, 1)}y
-                  </div>
-                  <div className="text-xs text-gray-600">Payback</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Heat Recovery */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Thermometer className="h-5 w-5 text-red-600" />
-              Heat Recovery
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Recoverable Heat</span>
-                <span className="font-semibold">{formatNumber(prediction.recoverable_heat_mw)} MW</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Heat Utilization</span>
-                <span className="font-semibold">{formatNumber(prediction.heat_utilization_percentage)}%</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Nearest Heat Sink
-                </span>
-                <div className="text-right">
-                  <div className="font-semibold">{formatNumber(prediction.nearest_heat_sink_distance_km)} km</div>
-                  {prediction.heat_sink_name && (
-                    <div className="text-xs text-gray-600">{prediction.heat_sink_name}</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="pt-2">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Heat Utilization Efficiency</span>
-                  <span>{formatNumber(prediction.heat_utilization_percentage)}%</span>
-                </div>
-                <Progress value={prediction.heat_utilization_percentage} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        )}
       </div>
 
-      {/* Yearly Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600" />
-            10-Year Financial Projection
-          </CardTitle>
-          <CardDescription>
-            Annual savings and cumulative benefits over time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Year</th>
-                  <th className="text-right p-2">Energy Cost</th>
-                  <th className="text-right p-2">Energy Savings</th>
-                  <th className="text-right p-2">Carbon Cost</th>
-                  <th className="text-right p-2">Net Savings</th>
-                  <th className="text-right p-2">Cumulative</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prediction.yearly_breakdown.map((year) => (
-                  <tr key={year.year} className="border-b hover:bg-gray-50">
-                    <td className="p-2 font-medium">{year.year}</td>
-                    <td className="p-2 text-right">{formatCurrency(year.energy_cost)}</td>
-                    <td className="p-2 text-right text-green-600">{formatCurrency(year.energy_savings)}</td>
-                    <td className="p-2 text-right">{formatCurrency(year.carbon_cost)}</td>
-                    <td className="p-2 text-right font-medium text-green-600">{formatCurrency(year.net_savings)}</td>
-                    <td className="p-2 text-right font-bold text-blue-600">{formatCurrency(year.cumulative_savings)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sensitivity Analysis */}
-      {prediction.sensitivity_analysis && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-purple-600" />
-              Sensitivity Analysis
-            </CardTitle>
-            <CardDescription>
-              Impact of key variables on overall savings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-lg font-bold text-blue-600">
-                  {formatNumber(prediction.sensitivity_analysis.energy_price_impact)}%
-                </div>
-                <div className="text-sm text-gray-600">Energy Price Impact</div>
-                <div className="text-xs text-gray-500 mt-1">Per 10% price change</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-lg font-bold text-green-600">
-                  {formatNumber(prediction.sensitivity_analysis.carbon_price_impact)}%
-                </div>
-                <div className="text-sm text-gray-600">Carbon Price Impact</div>
-                <div className="text-xs text-gray-500 mt-1">Per 10% price change</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-lg font-bold text-purple-600">
-                  {formatNumber(prediction.sensitivity_analysis.efficiency_impact)}%
-                </div>
-                <div className="text-sm text-gray-600">Efficiency Impact</div>
-                <div className="text-xs text-gray-500 mt-1">Per 1% efficiency change</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Key Insights */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5 text-indigo-600" />
-            Key Insights & Recommendations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {prediction.return_on_investment > 15 && (
-              <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
-                <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
-                <div>
-                  <div className="font-medium text-green-800">Excellent ROI</div>
-                  <div className="text-sm text-green-700">
-                    With {formatNumber(prediction.return_on_investment)}% ROI, this project shows strong financial returns.
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {prediction.payback_period_years <= 5 && (
-              <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
-                <div>
-                  <div className="font-medium text-blue-800">Quick Payback</div>
-                  <div className="text-sm text-blue-700">
-                    Payback period of {formatNumber(prediction.payback_period_years, 1)} years is excellent for infrastructure investments.
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {prediction.co2_reduction_percentage > 20 && (
-              <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
-                <Leaf className="h-4 w-4 text-green-600 mt-0.5" />
-                <div>
-                  <div className="font-medium text-green-800">Significant Carbon Impact</div>
-                  <div className="text-sm text-green-700">
-                    {formatNumber(prediction.co2_reduction_percentage)}% CO₂ reduction contributes meaningfully to sustainability goals.
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {prediction.nearest_heat_sink_distance_km > 10 && (
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 rounded-lg">
-                <MapPin className="h-4 w-4 text-yellow-600 mt-0.5" />
-                <div>
-                  <div className="font-medium text-yellow-800">Distance Consideration</div>
-                  <div className="text-sm text-yellow-700">
-                    Heat sink is {formatNumber(prediction.nearest_heat_sink_distance_km)} km away. Consider infrastructure costs for heat distribution.
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
     </div>
   );
 };
