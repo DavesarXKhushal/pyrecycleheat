@@ -6,13 +6,14 @@ import { createRoot } from 'react-dom/client';
 import DataCenterPopup from './DataCenterPopup';
 import MapControls from './MapControls';
 import { api } from '@/services/api';
-import type { HeatCenter, DemandSite, MapMarker } from '@/types';
+import type { HeatCenter, DemandSite, MapMarker, DataCenter } from '@/types';
+import type { DataCenter as ApiDataCenter } from '@/services/api';
 
 /**
  * Legacy interface maintained for backward compatibility with existing popup components
  * TODO: Refactor to use unified data types across the application
  */
-interface DataCenter {
+interface LegacyDataCenter {
   id: number;
   name: string;
   description: string;
@@ -41,11 +42,12 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
   const popupRef = useRef<maplibregl.Popup | null>(null);
   
   // Component state management
-  const [selectedDataCenter, setSelectedDataCenter] = useState<DataCenter | null>(null);
+  const [selectedDataCenter, setSelectedDataCenter] = useState<LegacyDataCenter | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [is3D, setIs3D] = useState(true);
   const [heatCenters, setHeatCenters] = useState<HeatCenter[]>([]);
   const [demandSites, setDemandSites] = useState<DemandSite[]>([]);
+  const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,14 +215,31 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
         setLoading(true);
         setError(null);
         
-        // Fetch both data types concurrently for better performance
-        const [heatCentersData, demandSitesData] = await Promise.all([
+        // Fetch all data types concurrently for better performance
+        const [heatCentersData, demandSitesData, dataCentersData] = await Promise.all([
           api.heatCenters.getAll(),
-          api.demandSites.getAll()
+          api.demandSites.getAll(),
+          api.dataCenters.getAll()
         ]);
         
         setHeatCenters(heatCentersData);
         setDemandSites(demandSitesData);
+        
+        // Transform API data centers to legacy format for compatibility
+        const transformedDataCenters: DataCenter[] = dataCentersData.map(dc => ({
+          id: dc.id,
+          name: dc.name,
+          description: `${dc.dc_type || 'Data Center'} - ${dc.total_it_load_kw || 0}kW IT Load`,
+          latitude: dc.location_lat,
+          longitude: dc.location_lng,
+          provider: 'Enterprise',
+          capacity: `${dc.total_it_load_kw || 0}kW`,
+          established: '2024',
+          website: '',
+          address: dc.address || ''
+        }));
+        
+        setDataCenters(transformedDataCenters);
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Failed to load data from backend');
@@ -240,7 +259,7 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
     if (!loading && !error && map.current) {
       addAllMarkers();
     }
-  }, [heatCenters, demandSites, loading, error]);
+  }, [heatCenters, demandSites, dataCenters, loading, error]);
 
   /**
    * Creates a visually appealing heat center marker with liquid glass effect
@@ -308,6 +327,66 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
        setSelectedMarker(marker);
        showPopup(marker);
      });
+
+    return el;
+  };
+
+  /**
+   * Creates a data center marker with server-themed styling
+   * Similar structure to other markers but with data center specific visual theme
+   * @param dataCenter - The data center data to create a marker for
+   * @returns HTML element for the marker
+   */
+  const createDataCenterMarkerElement = (dataCenter: DataCenter) => {
+    const el = document.createElement('div');
+    el.className = 'cursor-pointer transform transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:rotate-1';
+    el.innerHTML = `
+      <div class="relative group">
+        <!-- Main liquid glass container -->
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/30 backdrop-blur-xl" 
+             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1)); 
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);">
+          
+          <!-- Multi-layer glass effects -->
+          <div class="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl"></div>
+          <div class="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-2xl"></div>
+          
+          <!-- Top highlight -->
+          <div class="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+          <div class="absolute top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+          
+          <!-- Hover glow effect -->
+          <div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+          
+          <!-- Inner data center glow -->
+          <div class="absolute inset-2 bg-gradient-to-br from-purple-400/10 to-indigo-600/5 rounded-xl opacity-60"></div>
+          
+          <!-- Server icon for data center -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
+               class="relative z-10 text-gray-700 group-hover:text-purple-700 transition-all duration-300 group-hover:scale-110">
+            <rect width="20" height="8" x="2" y="2" rx="2" ry="2"/>
+            <rect width="20" height="8" x="2" y="14" rx="2" ry="2"/>
+            <line x1="6" x2="6.01" y1="6" y2="6"/>
+            <line x1="6" x2="6.01" y1="18" y2="18"/>
+          </svg>
+          
+          <!-- Status indicator - always active for data centers -->
+          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white/50 backdrop-blur-sm animate-pulse"
+               style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(126, 34, 206, 0.8));"></div>
+        </div>
+        
+        <!-- Enhanced pointer with liquid glass -->
+        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rotate-45 border border-white/40 backdrop-blur-sm"
+             style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);"></div>
+      </div>
+    `;
+
+    el.addEventListener('click', () => {
+      showDataCenterPopup(dataCenter);
+    });
 
     return el;
   };
@@ -416,6 +495,19 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
 
        markersRef.current.push(marker);
      });
+
+     // Add data center markers
+     dataCenters.forEach((dataCenter: DataCenter) => {
+       const el = createDataCenterMarkerElement(dataCenter);
+       const marker = new maplibregl.Marker({
+         element: el,
+         anchor: 'bottom'
+       })
+         .setLngLat([dataCenter.longitude, dataCenter.latitude])
+         .addTo(map.current!);
+
+       markersRef.current.push(marker);
+     });
   };
 
   const showPopup = (marker: MapMarker) => {
@@ -501,6 +593,95 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
       .setLngLat([marker.data.location_lng, marker.data.location_lat])
       .setDOMContent(popupEl)
       .addTo(map.current);
+
+    setSelectedMarker(marker);
+  };
+
+  const showDataCenterPopup = (dataCenter: DataCenter) => {
+    if (!map.current) return;
+
+    if (popupRef.current) {
+      popupRef.current.remove();
+    }
+
+    const popupEl = document.createElement('div');
+    const root = createRoot(popupEl);
+    
+    root.render(
+      <DataCenterPopup
+        dataCenter={dataCenter}
+        onClose={() => {
+          if (popupRef.current) {
+            popupRef.current.remove();
+            popupRef.current = null;
+          }
+          setSelectedDataCenter(null);
+        }}
+      />
+    );
+
+    // Calculate smart positioning to prevent overflow
+    const markerPoint = map.current.project([dataCenter.longitude, dataCenter.latitude]);
+    const mapContainer = map.current.getContainer();
+    const containerWidth = mapContainer.offsetWidth;
+    const containerHeight = mapContainer.offsetHeight;
+    
+    // Determine best anchor position based on marker location
+    let anchor: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom';
+    let offset: [number, number] = [0, -10];
+    
+    // Check if marker is in the top half of the screen
+    if (markerPoint.y < containerHeight * 0.4) {
+      // Check if marker is on the left or right side
+      if (markerPoint.x < containerWidth * 0.3) {
+        anchor = 'bottom-right';
+        offset = [-10, -10];
+      } else if (markerPoint.x > containerWidth * 0.7) {
+        anchor = 'bottom-left';
+        offset = [10, -10];
+      } else {
+        anchor = 'top';
+        offset = [0, 10];
+      }
+    } else if (markerPoint.y > containerHeight * 0.6) {
+      // Marker is in bottom half - use bottom anchor but check sides
+      if (markerPoint.x < containerWidth * 0.3) {
+        anchor = 'top-right';
+        offset = [-10, 10];
+      } else if (markerPoint.x > containerWidth * 0.7) {
+        anchor = 'top-left';
+        offset = [10, 10];
+      } else {
+        anchor = 'bottom';
+        offset = [0, -10];
+      }
+    } else {
+      // Marker is in middle vertically - check horizontal position
+      if (markerPoint.x < containerWidth * 0.25) {
+        anchor = 'left';
+        offset = [10, 0];
+      } else if (markerPoint.x > containerWidth * 0.75) {
+        anchor = 'right';
+        offset = [-10, 0];
+      } else {
+        anchor = 'bottom';
+        offset = [0, -10];
+      }
+    }
+
+    popupRef.current = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: offset,
+      className: 'data-center-popup',
+      maxWidth: '90vw',
+      anchor: anchor
+    })
+      .setLngLat([dataCenter.longitude, dataCenter.latitude])
+      .setDOMContent(popupEl)
+      .addTo(map.current);
+
+    setSelectedDataCenter(dataCenter);
   };
 
   useEffect(() => {
@@ -513,14 +694,28 @@ const MapComponent = ({ searchQuery }: MapComponentProps) => {
 
     const query = searchQuery.toLowerCase();
     markersRef.current.forEach((marker, index) => {
-      const allMarkers = [...heatCenters, ...demandSites];
+      // Create combined array of all markers in the same order they were added
+      const allMarkers = [...heatCenters, ...demandSites, ...dataCenters];
       const markerData = allMarkers[index];
-      const matches = 
-        markerData?.name.toLowerCase().includes(query) || false;
+      
+      let matches = false;
+      if (markerData) {
+        // Check if it's a data center (has different structure)
+        if ('provider' in markerData) {
+          const dataCenter = markerData as DataCenter;
+          matches = 
+            dataCenter.name.toLowerCase().includes(query) ||
+            dataCenter.provider.toLowerCase().includes(query) ||
+            dataCenter.description.toLowerCase().includes(query);
+        } else {
+          // Heat center or demand site
+          matches = markerData.name.toLowerCase().includes(query);
+        }
+      }
       
       marker.getElement().style.display = matches ? 'block' : 'none';
     });
-  }, [searchQuery, heatCenters, demandSites]);
+  }, [searchQuery, heatCenters, demandSites, dataCenters]);
 
   const handle3DToggle = (newIs3D: boolean) => {
     setIs3D(newIs3D);

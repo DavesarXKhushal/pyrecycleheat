@@ -72,12 +72,12 @@ export type RouteStatus = 'ACTIVE' | 'MAINTENANCE' | 'PLANNED' | 'DECOMMISSIONED
 // Extended types for frontend use
 export interface MapMarker {
   id: number;
-  type: 'heat_center' | 'demand_site';
+  type: 'heat_center' | 'demand_site' | 'data_center';
   name: string;
   latitude: number;
   longitude: number;
   status: 'active' | 'inactive' | 'maintenance' | 'connected' | 'disconnected';
-  data: HeatCenter | DemandSite;
+  data: HeatCenter | DemandSite | DataCenter;
 }
 
 export interface RouteVisualization extends Route {
@@ -218,12 +218,12 @@ export const MARKER_COLORS = {
     disconnected: '#6b7280', // gray-500
     priority_high: '#dc2626', // red-600
     priority_medium: '#f59e0b', // amber-500
-    priority_low: '#9ca3af',  // gray-400
+    priority_low: '#10b981',  // emerald-500
   },
 } as const;
 
 export const ROUTE_COLORS = {
-  ACTIVE: '#9ca3af',        // gray-400
+  ACTIVE: '#22c55e',        // green-500
   MAINTENANCE: '#f59e0b',   // amber-500
   PLANNED: '#8b5cf6',       // violet-500
   DECOMMISSIONED: '#6b7280', // gray-500

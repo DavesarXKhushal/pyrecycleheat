@@ -25,13 +25,14 @@ from models import (
     HeatCenterMetrics, DemandSiteMetrics, RouteMetrics, RouteStatus
 )
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
-engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Required for SQLite
+# Import prediction models and API
+from prediction_models import (
+    DataCenter, CarbonCredit, HeatSink, SavingsPrediction, PredictionScenario
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from prediction_api import router as prediction_router
+
+# Import database configuration
+from database import engine, get_db
 
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
@@ -62,21 +63,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_db() -> Session:
-    """
-    Database dependency injection.
-    
-    Provides a database session for each request and ensures proper cleanup.
-    This is the standard pattern for FastAPI database integration.
-    
-    Yields:
-        Session: SQLAlchemy database session
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Include prediction API router
+app.include_router(prediction_router)
 
 # ============================================================================
 # Pydantic Models for Request/Response Validation

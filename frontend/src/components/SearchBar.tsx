@@ -66,14 +66,14 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
               <div 
                 className="absolute -inset-2 rounded-3xl pointer-events-none animate-pulse"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2))',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(5, 150, 105, 0.3), rgba(34, 197, 94, 0.2))',
                   filter: 'blur(3px)'
                 }}
               />
               <div 
                 className="absolute -inset-1 rounded-3xl pointer-events-none"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1))',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
                   filter: 'blur(1px)'
                 }}
               />
@@ -82,7 +82,7 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
           
           <div className="flex-1 flex items-center pl-8 pr-4 py-6 relative z-10">
             <Search className={`h-7 w-7 mr-5 shrink-0 transition-all duration-300 ${
-              isFocused ? 'text-gray-800 scale-110 drop-shadow-sm' : 'text-gray-600 drop-shadow-sm'
+              isFocused ? 'text-emerald-700 scale-110 drop-shadow-sm' : 'text-gray-600 drop-shadow-sm'
             }`} />
             <Input
               type="text"
@@ -102,14 +102,14 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
           <div className="flex items-center gap-3 pr-6 relative z-10">
             <Button
               type="button"
-              variant="glass"
+              variant="ghost"
               size="icon"
               onClick={onMicrophoneClick}
-              className="h-14 w-14 rounded-2xl text-gray-700 hover:text-gray-900"
+              className="h-14 w-14 rounded-2xl hover:bg-white/30 text-gray-700 hover:text-gray-900 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20 shadow-lg"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
+                background: 'rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
               }}
             >
@@ -117,15 +117,10 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
             </Button>
             <Button
               type="submit"
-              variant="glass"
               size="icon"
-              className="h-14 w-14 rounded-2xl text-gray-700 hover:text-gray-900"
+              className="h-14 w-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-2xl border border-emerald-400/50"
               style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.3)'
+                boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4), 0 3px 10px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
               }}
             >
               <Search className="h-6 w-6 drop-shadow-sm" />
@@ -146,7 +141,7 @@ const SearchBar = ({ onSearch, onMicrophoneClick }: SearchBarProps) => {
         <div 
           className="absolute inset-0 rounded-3xl pointer-events-none opacity-20"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.3) 0%, transparent 70%)',
             filter: 'blur(20px)',
             transform: 'scale(1.1)'
           }}

@@ -1,5 +1,8 @@
 import React, { useMemo } from 'react';
-import { Activity, Thermometer, Building2, TrendingUp } from 'lucide-react';
+import { Activity, Zap, Database, TrendingUp, MapPin, Building2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { HeatCenter, DemandSite } from '@/services/api';
 
 interface StatsSidebarProps {
@@ -13,225 +16,221 @@ const StatsSidebar: React.FC<StatsSidebarProps> = ({
   demandSites = [], 
   isLoading = false 
 }) => {
+  // Calculate statistics with proper error handling
   const stats = useMemo(() => {
-    const heatCenterStats = {
-      total: heatCenters.length,
-      active: heatCenters.filter(hc => hc.is_active === true).length,
-      inactive: heatCenters.filter(hc => hc.is_active === false).length,
-      maxOutput: Math.max(...heatCenters.map(hc => hc.current_output_mw || 0), 0),
-      totalOutput: heatCenters.reduce((sum, hc) => sum + (hc.current_output_mw || 0), 0)
-    };
+    try {
+      // Heat Centers Statistics
+      const activeHeatCenters = heatCenters.filter(center => 
+        center.is_active === true
+      ).length;
+      const inactiveHeatCenters = heatCenters.length - activeHeatCenters;
+      
+      // Demand Sites Statistics  
+      const activeDemandSites = demandSites.filter(site => 
+        site.is_connected === true
+      ).length;
+      const inactiveDemandSites = demandSites.length - activeDemandSites;
+      
+      // Energy Statistics
+      const maxHeatOutput = heatCenters.reduce((max, center) => {
+        const output = center.current_output_mw || 0;
+        return output > max ? output : max;
+      }, 0);
+      
+      const maxDemand = demandSites.reduce((max, site) => {
+        const demand = site.peak_demand_mw || 0;
+        return demand > max ? demand : max;
+      }, 0);
+      
+      const totalCapacity = heatCenters.reduce((sum, center) => {
+        return sum + (center.current_output_mw || 0);
+      }, 0);
+      
+      const totalDemand = demandSites.reduce((sum, site) => {
+        return sum + (site.peak_demand_mw || 0);
+      }, 0);
 
-    const demandSiteStats = {
-      total: demandSites.length,
-      active: demandSites.filter(ds => ds.is_connected === true).length,
-      inactive: demandSites.filter(ds => ds.is_connected === false).length,
-      totalDemand: demandSites.reduce((sum, ds) => sum + (ds.current_demand_mw || 0), 0),
-      avgDemand: demandSites.length > 0 ? demandSites.reduce((sum, ds) => sum + (ds.current_demand_mw || 0), 0) / demandSites.length : 0
-    };
-
-    return {
-      heatCenters: heatCenterStats,
-      demandSites: demandSiteStats,
-      efficiency: heatCenterStats.totalOutput > 0 ? Math.round((demandSiteStats.totalDemand / heatCenterStats.totalOutput) * 100) : 0
-    };
+      return {
+        heatCenters: {
+          active: activeHeatCenters,
+          inactive: inactiveHeatCenters,
+          total: heatCenters.length,
+          maxOutput: maxHeatOutput,
+          totalCapacity
+        },
+        demandSites: {
+          active: activeDemandSites,
+          inactive: inactiveDemandSites,
+          total: demandSites.length,
+          maxDemand,
+          totalDemand
+        },
+        overall: {
+          totalSites: heatCenters.length + demandSites.length,
+          activeConnections: activeHeatCenters + activeDemandSites,
+          energyEfficiency: totalCapacity > 0 ? ((totalDemand / totalCapacity) * 100) : 0
+        }
+      };
+    } catch (error) {
+      console.error('Error calculating statistics:', error);
+      return {
+        heatCenters: { active: 0, inactive: 0, total: 0, maxOutput: 0, totalCapacity: 0 },
+        demandSites: { active: 0, inactive: 0, total: 0, maxDemand: 0, totalDemand: 0 },
+        overall: { totalSites: 0, activeConnections: 0, energyEfficiency: 0 }
+      };
+    }
   }, [heatCenters, demandSites]);
+
+  const formatEnergy = (value: number): string => {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)} GW`;
+    }
+    return `${value.toFixed(1)} MW`;
+  };
 
   if (isLoading) {
     return (
-      <div className="w-80 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex items-center justify-center">
-        <div className="text-gray-600 font-medium">Loading...</div>
+      <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200 shadow-lg p-4 space-y-4">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div 
-      className="w-80 h-full overflow-y-auto"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: 'inset 1px 0 0 rgba(255, 255, 255, 0.3), -10px 0 30px rgba(0, 0, 0, 0.1)'
-      }}
-    >
-      {/* Header */}
-      <div 
-        className="p-4 border-b border-white/20"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)'
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center shadow-lg">
-            <Activity className="h-4 w-4 text-white" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-800">System Overview</h2>
-        </div>
-      </div>
-
+    <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200 shadow-lg overflow-y-auto">
       <div className="p-4 space-y-4">
-
-        {/* Heat Centers */}
-        <div 
-          className="rounded-xl p-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Thermometer className="h-4 w-4 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-800">Heat Centers</h3>
-          </div>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Active / Inactive:</span>
-              <span className="font-semibold text-gray-900">{stats.heatCenters.active} / {stats.heatCenters.inactive}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Max / Total Output:</span>
-              <span className="font-semibold text-gray-900">{stats.heatCenters.maxOutput} / {stats.heatCenters.totalOutput} MW</span>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-6">
+          <Activity className="h-6 w-6 text-blue-600" />
+          <h2 className="text-xl font-bold text-gray-900">System Overview</h2>
         </div>
 
-        {/* Demand Sites */}
-        <div 
-          className="rounded-xl p-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Building2 className="h-4 w-4 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-800">Demand Sites</h3>
-          </div>
-          
-          <div className="space-y-2 text-sm">
+        {/* Heat Centers Card */}
+        <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-red-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-orange-700">
+              <Zap className="h-5 w-5" />
+              Heat Centers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Active / Inactive:</span>
-              <span className="font-semibold text-gray-900">{stats.demandSites.active} / {stats.demandSites.inactive}</span>
+              <span className="text-sm font-medium text-gray-600">Active</span>
+              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+                {stats.heatCenters.active}
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Total Demand:</span>
-              <span className="font-semibold text-gray-900">{stats.demandSites.totalDemand.toFixed(1)} MW</span>
+              <span className="text-sm font-medium text-gray-600">Inactive</span>
+              <Badge variant="secondary" className="bg-red-100 text-red-800">
+                {stats.heatCenters.inactive}
+              </Badge>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Avg Demand:</span>
-              <span className="font-semibold text-gray-900">{stats.demandSites.avgDemand.toFixed(1)} MW</span>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Max Output</span>
+                <span className="text-sm font-bold text-orange-600">
+                  {formatEnergy(stats.heatCenters.maxOutput)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Total Capacity</span>
+                <span className="text-sm font-bold text-orange-600">
+                  {formatEnergy(stats.heatCenters.totalCapacity)}
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* System Metrics */}
-        <div 
-          className="rounded-xl p-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-800">System Metrics</h3>
-          </div>
-          
-          <div className="space-y-2 text-sm">
+        {/* Demand Sites Card */}
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <Building2 className="h-5 w-5" />
+              Demand Sites
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Network Efficiency:</span>
-              <span className="font-semibold text-gray-900">{stats.efficiency}%</span>
+              <span className="text-sm font-medium text-gray-600">Active</span>
+              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+                {stats.demandSites.active}
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Total Centers:</span>
-              <span className="font-semibold text-gray-900">{stats.heatCenters.total}</span>
+              <span className="text-sm font-medium text-gray-600">Inactive</span>
+              <Badge variant="secondary" className="bg-red-100 text-red-800">
+                {stats.demandSites.inactive}
+              </Badge>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Peak Demand</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {formatEnergy(stats.demandSites.maxDemand)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Total Demand</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {formatEnergy(stats.demandSites.totalDemand)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Overall Statistics Card */}
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-purple-700">
+              <TrendingUp className="h-5 w-5" />
+              System Metrics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-600">Total Sites</span>
+              <Badge variant="outline" className="border-purple-300 text-purple-700">
+                {stats.overall.totalSites}
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Total Sites:</span>
-              <span className="font-semibold text-gray-900">{stats.demandSites.total}</span>
+              <span className="text-sm font-medium text-gray-600">Active Connections</span>
+              <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+                {stats.overall.activeConnections}
+              </Badge>
             </div>
-          </div>
-        </div>
+            <Separator />
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-500">System Utilization</span>
+              <span className="text-sm font-bold text-purple-600">
+                {stats.overall.energyEfficiency.toFixed(1)}%
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
-        <div 
-          className="rounded-xl p-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
-          }}
-        >
-          <h3 className="text-sm font-semibold text-gray-800 mb-3 text-center">Quick Stats</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div 
-              className="text-center p-3 rounded-lg"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                backdropFilter: 'blur(5px)',
-                WebkitBackdropFilter: 'blur(5px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <div className="text-lg font-bold text-gray-900">{stats.heatCenters.total}</div>
-              <div className="text-xs text-gray-700 font-medium">Heat Centers</div>
-            </div>
-            
-            <div 
-              className="text-center p-3 rounded-lg"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                backdropFilter: 'blur(5px)',
-                WebkitBackdropFilter: 'blur(5px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <div className="text-lg font-bold text-gray-900">{stats.demandSites.total}</div>
-              <div className="text-xs text-gray-700 font-medium">Demand Sites</div>
-            </div>
-            
-            <div 
-              className="text-center p-3 rounded-lg"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                backdropFilter: 'blur(5px)',
-                WebkitBackdropFilter: 'blur(5px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <div className="text-lg font-bold text-gray-900">{stats.heatCenters.totalOutput}</div>
-              <div className="text-xs text-gray-700 font-medium">Total MW</div>
-            </div>
-            
-            <div 
-              className="text-center p-3 rounded-lg"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                backdropFilter: 'blur(5px)',
-                WebkitBackdropFilter: 'blur(5px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <div className="text-lg font-bold text-gray-900">{stats.efficiency}%</div>
-              <div className="text-xs text-gray-700 font-medium">Efficiency</div>
-            </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <MapPin className="h-4 w-4 mx-auto mb-1 text-gray-600" />
+            <div className="text-lg font-bold text-gray-900">{stats.heatCenters.total}</div>
+            <div className="text-xs text-gray-500">Heat Centers</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <Database className="h-4 w-4 mx-auto mb-1 text-gray-600" />
+            <div className="text-lg font-bold text-gray-900">{stats.demandSites.total}</div>
+            <div className="text-xs text-gray-500">Demand Sites</div>
           </div>
         </div>
       </div>

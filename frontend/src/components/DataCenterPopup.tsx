@@ -1,6 +1,9 @@
-import { X, Server, Zap, MapPin, Building2 } from 'lucide-react';
+import { X, Server, Zap, Calendar, MapPin, ExternalLink, Building2, Thermometer, Activity, DollarSign, TrendingUp, Leaf, Calculator } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import type { MapMarker, HeatCenter, DemandSite } from '@/types';
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface DataCenter {
   id: number;
@@ -13,6 +16,26 @@ interface DataCenter {
   established: string;
   website?: string;
   address?: string;
+  // Additional API fields
+  dc_type?: string;
+  total_it_load_kw?: number;
+  pue?: number;
+  cooling_type?: string;
+  energy_source?: string;
+  utilization_percent?: number;
+  electricity_cost_kwh?: number;
+}
+
+interface PredictionData {
+  annual_savings: number;
+  energy_savings_mwh: number;
+  co2_reduction_tons: number;
+  return_on_investment: number;
+  payback_period_years: number;
+  net_present_value: number;
+  scenario_name: string;
+  recoverable_heat_mw: number;
+  heat_utilization_percentage: number;
 }
 
 interface DataCenterPopupProps {
@@ -22,30 +45,9 @@ interface DataCenterPopupProps {
 }
 
 const DataCenterPopup = ({ dataCenter, marker, onClose }: DataCenterPopupProps) => {
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  // Auto-close functionality when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [onClose]);
+  const [predictionData, setPredictionData] = useState<PredictionData | null>(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
 
   // Use marker data if available, otherwise fall back to dataCenter
   const displayData = marker ? {
@@ -61,164 +63,553 @@ const DataCenterPopup = ({ dataCenter, marker, onClose }: DataCenterPopupProps) 
 
   const isHeatCenter = marker?.type === 'heat_center';
   const isDemandSite = marker?.type === 'demand_site';
+  const isDataCenter = !marker || marker?.type === 'data_center';
   
   const heatCenterData = isHeatCenter ? marker.data as HeatCenter : null;
   const demandSiteData = isDemandSite ? marker.data as DemandSite : null;
 
+  // Fetch prediction data for data centers
+  useEffect(() => {
+    if (isDataCenter) {
+      // Get data center ID from either marker data or dataCenter prop
+      const dataCenterId = marker?.data?.id || dataCenter?.id;
+      if (dataCenterId) {
+        fetchPredictionData(dataCenterId);
+      }
+    }
+  }, [isDataCenter, marker?.data?.id, dataCenter?.id]);
+
+  const fetchPredictionData = async (dataCenterId: number) => {
+    setLoadingPrediction(true);
+    setPredictionError(null);
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/predictions/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data_center_id: dataCenterId,
+          carbon_credit_id: 1, // Default carbon credit
+          heat_sink_ids: [1], // Default heat sink
+          scenario_name: 'comprehensive',
+          analysis_years: 10,
+          discount_rate: 0.08
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPredictionData(data);
+      } else {
+        setPredictionError('Failed to load prediction data');
+      }
+    } catch (error) {
+      setPredictionError('Network error loading predictions');
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatNumber = (value: number, decimals: number = 1): string => {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  };
+
+  const handleWebsiteClick = () => {
+    if (dataCenter?.website) {
+      window.open(dataCenter.website, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const getDataCenterTypeColor = (dcType?: string) => {
+    switch (dcType?.toLowerCase()) {
+      case 'hyperscale':
+        return 'bg-purple-100 text-purple-800';
+      case 'enterprise':
+        return 'bg-blue-100 text-blue-800';
+      case 'colocation':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getEnergySourceColor = (energySource?: string) => {
+    switch (energySource?.toLowerCase()) {
+      case 'renewable':
+        return 'bg-green-100 text-green-800';
+      case 'grid':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'hybrid':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div 
-      ref={popupRef}
-      className="relative w-80 max-w-[90vw] rounded-2xl border border-white/20 shadow-2xl overflow-hidden"
+      className="relative w-64 sm:w-72 max-w-[90vw] rounded-2xl border border-white/30 shadow-xl backdrop-blur-xl overflow-hidden"
       style={{
-        background: 'rgba(255, 255, 255, 0.1)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
+        boxShadow: '0 15px 40px rgba(0, 0, 0, 0.12), 0 6px 20px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.1)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
         zIndex: 1001,
-        fontFamily: 'Poppins, -apple-system, BlinkMacSystemFont, sans-serif'
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        userSelect: 'text'
       }}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Single container with all content */}
-      <div className="p-5">
-        {/* Header with close button */}
-        <div className="flex items-start justify-between mb-4">
+      {/* Multi-layer glass effects */}
+      <div className="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-3xl pointer-events-none" />
+      <div className="absolute inset-[2px] bg-gradient-to-t from-white/5 to-white/15 rounded-3xl pointer-events-none" />
+      
+      {/* Top highlight */}
+      <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+      <div className="absolute top-1 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      
+      {/* Ambient glow effect */}
+      <div 
+        className="absolute inset-0 rounded-3xl pointer-events-none opacity-20"
+        style={{
+          background: 'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.3) 0%, transparent 70%)',
+          filter: 'blur(20px)',
+          transform: 'scale(1.1)'
+        }}
+      />
+      
+      <div className="relative z-10 p-3 sm:p-4">
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              {isHeatCenter && <Zap className="w-4 h-4 text-gray-700 flex-shrink-0" />}
-              {isDemandSite && <Building2 className="w-4 h-4 text-gray-700 flex-shrink-0" />}
-              {!marker && <Server className="w-4 h-4 text-gray-700 flex-shrink-0" />}
-              <h3 className="text-lg font-semibold text-gray-900 truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            <div className="flex items-center gap-2 mb-1">
+              {isHeatCenter && <Zap className="w-4 h-4 text-red-600 flex-shrink-0" />}
+              {isDemandSite && <Building2 className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+              {isDataCenter && <Server className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 font-poppins truncate"
+                  style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
                 {displayData.name}
               </h3>
             </div>
-            <div className="flex items-center gap-2">
-              <span 
-                className="text-xs px-2 py-1 rounded-full border border-white/30"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  fontFamily: 'Poppins, sans-serif'
-                }}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge 
+                variant="secondary" 
+                className={`text-xs font-medium ${
+                  isHeatCenter 
+                    ? heatCenterData?.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    : isDemandSite 
+                    ? demandSiteData?.is_connected ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                    : getDataCenterTypeColor(dataCenter?.dc_type)
+                }`}
               >
                 {isHeatCenter 
-                  ? (heatCenterData?.is_active ? '● Active' : '○ Inactive')
+                  ? (heatCenterData?.is_active ? 'Active' : 'Inactive')
                   : isDemandSite 
-                  ? (demandSiteData?.is_connected ? '● Connected' : '○ Disconnected')
-                  : dataCenter?.provider || 'Data Center'
+                  ? (demandSiteData?.is_connected ? 'Connected' : 'Disconnected')
+                  : dataCenter?.dc_type || 'Data Center'
                 }
-              </span>
-              {marker && (
-                <span 
-                  className="text-xs px-2 py-1 rounded-full border border-white/30"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    backdropFilter: 'blur(10px)',
-                    fontFamily: 'Poppins, sans-serif'
-                  }}
-                >
-                  {marker.type === 'heat_center' ? 'Heat Center' : 'Demand Site'}
-                </span>
+              </Badge>
+              {dataCenter?.energy_source && (
+                <Badge variant="outline" className={`text-xs ${getEnergySourceColor(dataCenter.energy_source)}`}>
+                  {dataCenter.energy_source}
+                </Badge>
               )}
             </div>
           </div>
           
-          {/* Close button */}
-          <button
+          <Button
             onClick={onClose}
-            className="w-6 h-6 rounded-full flex items-center justify-center ml-3 shrink-0 transition-all duration-200 hover:scale-105"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl hover:bg-white/30 text-gray-700 hover:text-gray-900 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20 shadow-lg shrink-0 ml-2"
             style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)'
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
             }}
           >
-            <X className="h-3 w-3 text-gray-700" />
-          </button>
+            <X className="h-4 w-4 sm:h-5 sm:w-5 drop-shadow-sm" />
+          </Button>
         </div>
 
-        {/* Location */}
-        <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' }}>
-          <MapPin className="w-4 h-4 text-gray-700 mt-0.5 flex-shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-gray-800 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Location</p>
-            <p className="text-xs text-gray-700" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              {marker 
-                ? `${marker.data.location_lat.toFixed(4)}, ${marker.data.location_lng.toFixed(4)}`
-                : dataCenter?.address || `${dataCenter?.latitude.toFixed(4)}, ${dataCenter?.longitude.toFixed(4)}`
+        <div className="space-y-2 sm:space-y-3">
+          {/* Description/Details Section */}
+          <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+               style={{
+                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+               }}>
+            <p className="text-xs text-gray-800 leading-relaxed font-medium"
+               style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+              {isHeatCenter 
+                ? `Heat generation facility with ${heatCenterData?.fuel_type} fuel type`
+                : isDemandSite 
+                ? `${demandSiteData?.site_type} facility requiring thermal energy`
+                : dataCenter?.description || `${dataCenter?.dc_type || 'Data center'} facility with ${dataCenter?.cooling_type || 'standard'} cooling`
               }
             </p>
           </div>
-        </div>
 
-        {/* Type-specific information */}
-        {isHeatCenter && heatCenterData && (
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-gray-700" />
-              <span className="text-sm font-medium text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Heat Center Details</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <p className="text-xs text-gray-700 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Max Capacity</p>
-                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{heatCenterData.max_capacity_mw} MW</p>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {/* IT Load/Capacity Section */}
+            <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                 }}>
+              <div className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                {isHeatCenter ? 'Max Capacity' : isDemandSite ? 'Peak Demand' : 'IT Load'}
               </div>
-              <div className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <p className="text-xs text-gray-700 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Current Output</p>
-                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{heatCenterData.current_output_mw} MW</p>
+              <div className="text-sm font-bold text-emerald-700"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                {isHeatCenter 
+                  ? `${heatCenterData?.max_capacity_mw} MW`
+                  : isDemandSite 
+                  ? `${demandSiteData?.peak_demand_mw} MW`
+                  : dataCenter?.total_it_load_kw ? `${dataCenter.total_it_load_kw} kW` : dataCenter?.capacity || 'N/A'
+                }
               </div>
             </div>
-            <div className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
-              <p className="text-xs text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <span className="font-medium">Fuel Type:</span> {heatCenterData.fuel_type}
-              </p>
+
+            {/* PUE/Efficiency Section */}
+            <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                 }}>
+              <div className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                {isHeatCenter ? 'Efficiency' : isDemandSite ? 'Site Type' : 'PUE'}
+              </div>
+              <div className="text-sm font-bold text-emerald-700"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                {isHeatCenter 
+                  ? `${heatCenterData?.efficiency_percent}%`
+                  : isDemandSite 
+                  ? demandSiteData?.site_type || 'Unknown'
+                  : dataCenter?.pue ? `${dataCenter.pue}` : 'N/A'
+                }
+              </div>
             </div>
           </div>
-        )}
 
-        {isDemandSite && demandSiteData && (
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Building2 className="w-4 h-4 text-gray-700" />
-              <span className="text-sm font-medium text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Demand Site Details</span>
+          {/* Additional Data Center Info */}
+          {isDataCenter && dataCenter && (
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              {/* Utilization */}
+              <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                   style={{
+                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                   }}>
+                <div className="flex items-center gap-1 mb-1">
+                  <Activity className="w-3 h-3 text-gray-600" />
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                       style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                    Utilization
+                  </div>
+                </div>
+                <div className="text-sm font-bold text-emerald-700"
+                     style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                  {dataCenter.utilization_percent ? `${dataCenter.utilization_percent}%` : 'N/A'}
+                </div>
+              </div>
+
+              {/* Cooling Type */}
+              <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                   style={{
+                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                   }}>
+                <div className="flex items-center gap-1 mb-1">
+                  <Thermometer className="w-3 h-3 text-gray-600" />
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                       style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                    Cooling
+                  </div>
+                </div>
+                <div className="text-sm font-bold text-emerald-700"
+                     style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                  {dataCenter.cooling_type?.replace('_', ' ') || 'N/A'}
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <p className="text-xs text-gray-700 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Peak Demand</p>
-                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{demandSiteData.peak_demand_mw} MW</p>
-              </div>
-              <div className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <p className="text-xs text-gray-700 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Site Type</p>
-                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{demandSiteData.site_type}</p>
-              </div>
+          )}
+
+          {/* Location Section */}
+          <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+               style={{
+                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+               }}>
+            <div className="flex items-center gap-2 mb-1">
+              <MapPin className="w-3 h-3 text-gray-600" />
+              <span className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                    style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                Location
+              </span>
+            </div>
+            <div className="text-xs text-gray-800 font-medium break-all"
+                 style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+              {marker 
+                ? `${(marker.data as any).location_lat?.toFixed(4) || marker.latitude}, ${(marker.data as any).location_lng?.toFixed(4) || marker.longitude}`
+                : dataCenter?.address || `${dataCenter?.latitude.toFixed(4)}, ${dataCenter?.longitude.toFixed(4)}`
+              }
             </div>
           </div>
-        )}
 
-        {!marker && dataCenter && (
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Server className="w-4 h-4 text-gray-700" />
-              <span className="text-sm font-medium text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Data Center Details</span>
+          {/* Energy Cost (for data centers) */}
+          {isDataCenter && dataCenter?.electricity_cost_kwh && (
+            <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                 }}>
+              <div className="text-xs text-gray-800 font-medium"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                <span className="font-semibold">Electricity Cost:</span> ${dataCenter.electricity_cost_kwh}/kWh
+              </div>
             </div>
+          )}
+
+          {/* Prediction Data Section for Data Centers */}
+          {isDataCenter && (
             <div className="space-y-2">
-              <div className="flex justify-between items-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <span className="text-xs text-gray-700" style={{ fontFamily: 'Poppins, sans-serif' }}>Provider:</span>
-                <span className="text-xs font-medium text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{dataCenter.provider}</span>
+              {/* Prediction Header */}
+              <div className="flex items-center gap-2 pt-2">
+                <Calculator className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-gray-800"
+                      style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                  Savings Prediction (Comprehensive Scenario)
+                </span>
               </div>
-              <div className="flex justify-between items-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <span className="text-xs text-gray-700" style={{ fontFamily: 'Poppins, sans-serif' }}>Capacity:</span>
-                <span className="text-xs font-medium text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{dataCenter.capacity}</span>
-              </div>
-              <div className="flex justify-between items-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.15)' }}>
-                <span className="text-xs text-gray-700" style={{ fontFamily: 'Poppins, sans-serif' }}>Established:</span>
-                <span className="text-xs font-medium text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>{dataCenter.established}</span>
+
+              {loadingPrediction && (
+                <div className="p-3 rounded-xl border border-white/20 backdrop-blur-sm text-center"
+                     style={{
+                       background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                     }}>
+                  <div className="text-xs text-gray-600">Loading prediction data...</div>
+                </div>
+              )}
+
+              {predictionError && (
+                <div className="p-3 rounded-xl border border-red-200 backdrop-blur-sm"
+                     style={{
+                       background: 'linear-gradient(135deg, rgba(255, 200, 200, 0.15), rgba(255, 200, 200, 0.05))',
+                       boxShadow: '0 4px 16px rgba(255, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                     }}>
+                  <div className="text-xs text-red-600">{predictionError}</div>
+                </div>
+              )}
+
+              {predictionData && !loadingPrediction && (
+                <>
+                  {/* Annual Savings */}
+                  <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                       style={{
+                         background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))',
+                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                       }}>
+                    <div className="flex items-center gap-1 mb-1">
+                      <DollarSign className="w-3 h-3 text-green-600" />
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                        Annual Savings
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold text-green-700"
+                         style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                      {formatCurrency(predictionData.annual_savings)}
+                    </div>
+                  </div>
+
+                  {/* Financial Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    {/* ROI */}
+                    <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                         style={{
+                           background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05))',
+                           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                         }}>
+                      <div className="flex items-center gap-1 mb-1">
+                        <TrendingUp className="w-3 h-3 text-blue-600" />
+                        <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                             style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                          ROI
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-blue-700"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                        {formatNumber(predictionData.return_on_investment)}%
+                      </div>
+                    </div>
+
+                    {/* Payback Period */}
+                    <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                         style={{
+                           background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05))',
+                           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                         }}>
+                      <div className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                        Payback
+                      </div>
+                      <div className="text-sm font-bold text-purple-700"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                        {formatNumber(predictionData.payback_period_years)} years
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Environmental Impact Grid */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    {/* Energy Savings */}
+                    <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                         style={{
+                           background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05))',
+                           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                         }}>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Zap className="w-3 h-3 text-yellow-600" />
+                        <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                             style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                          Energy Saved
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-yellow-700"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                        {formatNumber(predictionData.energy_savings_mwh)} MWh
+                      </div>
+                    </div>
+
+                    {/* CO2 Reduction */}
+                    <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                         style={{
+                           background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))',
+                           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                         }}>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Leaf className="w-3 h-3 text-green-600" />
+                        <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                             style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                          CO₂ Reduced
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-green-700"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                        {formatNumber(predictionData.co2_reduction_tons)} tons
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Heat Recovery */}
+                  {predictionData.recoverable_heat_mw > 0 && (
+                    <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                         style={{
+                           background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))',
+                           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                         }}>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Thermometer className="w-3 h-3 text-red-600" />
+                        <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide"
+                             style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                          Heat Recovery
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-red-700"
+                           style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                        {formatNumber(predictionData.recoverable_heat_mw)} MW ({formatNumber(predictionData.heat_utilization_percentage)}%)
+                      </div>
+                    </div>
+                  )}
+
+                  {/* NPV */}
+                  <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                       style={{
+                         background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.05))',
+                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                       }}>
+                    <div className="text-xs text-gray-600 font-semibold mb-1 uppercase tracking-wide"
+                         style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                      Net Present Value (10 years)
+                    </div>
+                    <div className={`text-sm font-bold ${predictionData.net_present_value > 0 ? 'text-green-700' : 'text-red-700'}`}
+                         style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                      {formatCurrency(predictionData.net_present_value)}
+                    </div>
+                  </div>
+
+                  {/* Formulas Used */}
+                  <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                       style={{
+                         background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15), rgba(156, 163, 175, 0.05))',
+                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                       }}>
+                    <div className="text-xs text-gray-600 font-semibold mb-2 uppercase tracking-wide"
+                         style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)' }}>
+                      Key Formulas Used
+                    </div>
+                    <div className="text-xs text-gray-700 space-y-1"
+                         style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                      <div>• Annual Energy = IT Load × PUE × 8760 hours</div>
+                      <div>• Heat Recovery = IT Load × 0.8 × Efficiency</div>
+                      <div>• CO₂ Emissions = Energy × 0.4 tons/MWh</div>
+                      <div>• NPV = Σ(Cash Flow / (1 + discount_rate)^year)</div>
+                      <div>• ROI = (Total Benefits - Total Costs) / Total Costs × 100</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Connection Status for heat centers and demand sites */}
+          {(isHeatCenter || isDemandSite) && (
+            <div className="p-2.5 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                 }}>
+              <div className="text-xs text-gray-800 font-medium"
+                   style={{ textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)' }}>
+                <span className="font-semibold">Connection Status:</span> {
+                  isHeatCenter 
+                    ? (heatCenterData?.is_active ? 'Active' : 'Inactive')
+                    : isDemandSite 
+                    ? (demandSiteData?.is_connected ? 'Connected' : 'Disconnected')
+                    : 'Unknown'
+                }
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+      
+      {/* Bottom reflection effect */}
+      <div 
+        className="absolute -bottom-2 left-6 right-6 h-2 opacity-30 rounded-full"
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
+          filter: 'blur(2px)'
+        }}
+      />
     </div>
   );
 };

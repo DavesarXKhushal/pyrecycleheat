@@ -94,6 +94,31 @@ export interface SystemAnalytics {
   };
 }
 
+export interface DataCenter {
+  id: number;
+  name: string;
+  location_lat: number;
+  location_lng: number;
+  address?: string;
+  dc_type?: string;
+  total_it_load_kw?: number;
+  pue?: number;
+  cooling_type?: string;
+  energy_source?: string;
+  floor_area_sqm?: number;
+  rack_count?: number;
+  server_count?: number;
+  storage_capacity_tb?: number;
+  utilization_percent?: number;
+  operating_hours_year?: number;
+  ambient_temp_celsius?: number;
+  electricity_cost_kwh?: number;
+  cooling_cost_kwh?: number;
+  maintenance_cost_annual?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface HeatCenterAnalytics {
   center_id: number;
   center_name: string;
@@ -186,6 +211,22 @@ export const demandSiteService = {
   },
 };
 
+// Data Centers API
+export const dataCenterService = {
+  async getAll(params?: { skip?: number; limit?: number }): Promise<DataCenter[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.skip !== undefined) searchParams.set('skip', params.skip.toString());
+    if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString());
+    
+    const query = searchParams.toString();
+    return apiRequest<DataCenter[]>(`/api/v1/predictions/data-centers${query ? `?${query}` : ''}`);
+  },
+
+  async getById(id: number): Promise<DataCenter> {
+    return apiRequest<DataCenter>(`/api/v1/predictions/data-centers/${id}`);
+  },
+};
+
 // Routes API
 export const routeService = {
   async getAll(params?: { 
@@ -229,6 +270,7 @@ export const healthService = {
 export const api = {
   heatCenters: heatCenterService,
   demandSites: demandSiteService,
+  dataCenters: dataCenterService,
   routes: routeService,
   analytics: analyticsService,
   health: healthService,

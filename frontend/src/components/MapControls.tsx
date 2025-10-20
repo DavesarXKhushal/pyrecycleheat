@@ -21,15 +21,20 @@ const MapControls = ({ onToggle3D }: MapControlsProps) => {
         {/* 3D Control */}
         <div className="relative group">
           <Button
-            variant="glass"
             onClick={() => handleToggle('3D')}
-            className="relative overflow-hidden rounded-2xl w-16 h-16 p-0"
+            className={`
+              relative overflow-hidden rounded-2xl w-16 h-16 p-0 transition-all duration-500 ease-out
+              ${is3D 
+                ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg hover:shadow-xl scale-105' 
+                : 'bg-white/10 text-gray-600 hover:bg-white/20 hover:text-gray-800 backdrop-blur-xl border border-white/20'
+              }
+              hover:scale-110 active:scale-95
+            `}
             style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
-              backdropFilter: 'blur(40px) saturate(200%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+              backdropFilter: !is3D ? 'blur(40px) saturate(200%)' : undefined,
+              WebkitBackdropFilter: !is3D ? 'blur(40px) saturate(200%)' : undefined,
               boxShadow: is3D 
-                ? '0 8px 32px rgba(255, 255, 255, 0.3), 0 2px 8px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4)' 
+                ? '0 8px 32px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.2)' 
                 : '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
             }}
           >
@@ -42,18 +47,7 @@ const MapControls = ({ onToggle3D }: MapControlsProps) => {
                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%)'
                   }}
                 />
-                <div className="absolute inset-[1px] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl pointer-events-none" />
-                <div className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-              </>
-            )}
-
-            {/* Active state glass effect */}
-            {is3D && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-white/5 rounded-2xl pointer-events-none" />
-                <div className="absolute inset-[1px] bg-gradient-to-br from-white/25 via-white/8 to-transparent rounded-2xl pointer-events-none" />
-                <div className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-                <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl blur-sm" />
+                <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
               </>
             )}
             
@@ -99,13 +93,21 @@ const MapControls = ({ onToggle3D }: MapControlsProps) => {
         {/* 2D Control */}
         <div className="relative group">
           <Button
-            variant="glass"
             onClick={() => handleToggle('2D')}
-            className="relative h-16 w-16 rounded-2xl"
+            className={`
+              relative h-16 w-16 rounded-2xl border border-white/30 transition-all duration-500 hover:scale-105 hover:-translate-y-1 backdrop-blur-xl shadow-2xl
+              ${!is3D 
+                ? 'text-white shadow-2xl' 
+                : 'text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl'
+              }
+              hover:scale-110 active:scale-95
+            `}
             style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
+              background: !is3D 
+                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.8))'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
               boxShadow: !is3D
-                ? '0 8px 32px rgba(255, 255, 255, 0.4), 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1)'
+                ? '0 8px 32px rgba(16, 185, 129, 0.4), 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1)'
                 : '0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.1)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)'
@@ -121,8 +123,8 @@ const MapControls = ({ onToggle3D }: MapControlsProps) => {
             {/* Active glow effect */}
             {!is3D && (
               <>
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-white/10 rounded-2xl animate-pulse" />
-                <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl blur-sm" />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 to-green-500/20 rounded-2xl animate-pulse" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400/10 to-green-500/10 rounded-2xl blur-sm" />
               </>
             )}
             
