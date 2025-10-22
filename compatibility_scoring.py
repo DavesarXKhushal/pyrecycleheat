@@ -93,8 +93,3 @@ if 0.7<= score <0.85:
 
 if 0.85<= score< 1:
     print(f" Your score of {score: .2f} is very good. This match is recommended. ")
-
-
-
-
-
