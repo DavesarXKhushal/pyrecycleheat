@@ -215,8 +215,9 @@ class DataCenterPredictionEngine:
         # For efficiency improvements, ensure we have realistic savings
         if energy_savings_kwh > 0 or heat_savings > 0:
             # If we have energy savings but total savings are low, boost them
-            if total_annual_savings < energy_savings_kwh * 0.10:  # At least 10 cents per kWh saved
-                total_annual_savings = energy_savings_kwh * 0.12 + heat_savings
+            MIN_VALUE_PER_KWH_SAVED = 0.10  # At least 10 cents per kWh saved
+            if total_annual_savings < energy_savings_kwh * MIN_VALUE_PER_KWH_SAVED:
+                total_annual_savings = energy_savings_kwh * MIN_VALUE_PER_KWH_SAVED + heat_savings
             
             # Minimum savings for any efficiency improvement
             total_annual_savings = max(total_annual_savings, 50000)  # Minimum $50k annual savings

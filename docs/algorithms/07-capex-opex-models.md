@@ -310,8 +310,8 @@ payback_years = additional_capex / total_annual_savings  (if savings > 0)
 ```python
 if energy_savings_kwh > 0 or heat_savings > 0:
     # Ensure minimum realistic savings
-    if total_annual_savings < energy_savings_kwh * 0.10:
-        total_annual_savings = energy_savings_kwh * 0.12 + heat_savings
+    if total_annual_savings < energy_savings_kwh * MinValuePerKWhSaved:
+        total_annual_savings = energy_savings_kwh * MinValuePerKWhSaved + heat_savings
     
     # Minimum $50k annual savings for any efficiency improvement
     total_annual_savings = max(total_annual_savings, 50000)
@@ -492,7 +492,7 @@ func CalculateSavingsScenarios(baseCase, improvedCase ScenarioMetrics) SavingsMe
         // Ensure at least $0.10/kWh value
         minValue := energySavingsKWh * MinValuePerKWhSaved
         if totalAnnualSavings < minValue {
-            totalAnnualSavings = energySavingsKWh*0.12 + heatSavings
+            totalAnnualSavings = energySavingsKWh*MinValuePerKWhSaved + heatSavings
         }
         
         // Ensure minimum $50k for any efficiency improvement
