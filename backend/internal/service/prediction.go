@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	db "github.com/pyrecycleheat/backend-go/internal/database"
-	"github.com/pyrecycleheat/backend-go/internal/engine"
+	db "github.com/pyrecycleheat/backend/internal/database"
+	"github.com/pyrecycleheat/backend/internal/engine"
 )
 
 type PredictionService struct {

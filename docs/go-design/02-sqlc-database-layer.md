@@ -13,7 +13,7 @@ This document defines the SQL schema and queries for the PyRecycle Heat Go backe
 ## Directory Structure
 
 ```
-backend-go/
+backend/
 └── internal/
     └── database/
         ├── schema/
@@ -868,7 +868,7 @@ import (
     "context"
     "database/sql"
     "fmt"
-    "github.com/pyrecycleheat/backend-go/internal/database"
+    "github.com/pyrecycleheat/backend/internal/database"
 )
 
 type DistrictHeatingService struct {

@@ -1,4 +1,4 @@
-module github.com/pyrecycleheat/backend-go
+module github.com/pyrecycleheat/backend
 
 go 1.23
 

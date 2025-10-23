@@ -7,13 +7,14 @@
 package pyrecycleheatv1
 
 import (
-	_ "github.com/pyrecycleheat/backend-go/api/gen/go/buf/validate"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "github.com/pyrecycleheat/backend/api/gen/go/buf/validate"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -1864,7 +1865,7 @@ const file_pyrecycleheat_v1_district_heating_proto_rawDesc = "" +
 	"\x15ROUTE_STATUS_INACTIVE\x10\x02\x12\x1c\n" +
 	"\x18ROUTE_STATUS_MAINTENANCE\x10\x03\x12\x18\n" +
 	"\x14ROUTE_STATUS_PLANNED\x10\x04B\xde\x01\n" +
-	"\x14com.pyrecycleheat.v1B\x14DistrictHeatingProtoP\x01ZOgithub.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1\xa2\x02\x03PXX\xaa\x02\x10Pyrecycleheat.V1\xca\x02\x10Pyrecycleheat\\V1\xe2\x02\x1cPyrecycleheat\\V1\\GPBMetadata\xea\x02\x11Pyrecycleheat::V1b\x06proto3"
+	"\x14com.pyrecycleheat.v1B\x14DistrictHeatingProtoP\x01ZOgithub.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1\xa2\x02\x03PXX\xaa\x02\x10Pyrecycleheat.V1\xca\x02\x10Pyrecycleheat\\V1\xe2\x02\x1cPyrecycleheat\\V1\\GPBMetadata\xea\x02\x11Pyrecycleheat::V1b\x06proto3"
 
 var (
 	file_pyrecycleheat_v1_district_heating_proto_rawDescOnce sync.Once

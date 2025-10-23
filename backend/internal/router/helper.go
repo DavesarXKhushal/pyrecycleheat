@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"time"
 
-	pyv1 "github.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1"
-	db "github.com/pyrecycleheat/backend-go/internal/database"
+	pyv1 "github.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1"
+	db "github.com/pyrecycleheat/backend/internal/database"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

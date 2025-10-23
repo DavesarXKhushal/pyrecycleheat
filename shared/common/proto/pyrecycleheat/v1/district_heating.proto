@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pyrecycleheat.v1;
 
-option go_package = "github.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1";
+option go_package = "github.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1";
 
 import "google/protobuf/timestamp.proto";
 import "buf/validate/validate.proto";

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	db "github.com/pyrecycleheat/backend-go/internal/database"
+	db "github.com/pyrecycleheat/backend/internal/database"
 )
 
 type DistrictHeatingService struct {

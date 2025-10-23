@@ -598,7 +598,7 @@ CHECK (operating_hours_year >= 1 AND operating_hours_year <= 8760)
 
 ### Phase 1: Schema Migration
 
-1. **Create migration files** using a migration tool (e.g., golang-migrate)
+1. **Create migration files** using a migration tool (github.com/pressly/goose)
 2. **Generate sqlc code** from schema definitions
 3. **Implement validation** in application layer for constraints
 
@@ -662,5 +662,5 @@ CREATE INDEX idx_metrics_timeseries ON heat_center_metrics(heat_center_id, times
 
 - **Python Models:** `backend/models.py`, `backend/prediction_models.py`
 - **Database:** SQLite3 (single-file, embedded)
-- **Target Tools:** sqlc, golang-migrate
+- **Target Tools:** sqlc, goose
 - **Go Drivers:** github.com/mattn/go-sqlite3

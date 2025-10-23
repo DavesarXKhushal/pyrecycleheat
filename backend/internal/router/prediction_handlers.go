@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	pyv1 "github.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1"
-	db "github.com/pyrecycleheat/backend-go/internal/database"
-	"github.com/pyrecycleheat/backend-go/internal/service"
+	pyv1 "github.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1"
+	db "github.com/pyrecycleheat/backend/internal/database"
+	"github.com/pyrecycleheat/backend/internal/service"
 )
 
 type predictionRPC struct {

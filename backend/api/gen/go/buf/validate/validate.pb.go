@@ -7,12 +7,13 @@
 package validate
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 const (
@@ -505,7 +506,7 @@ const file_buf_validate_validate_proto_rawDesc = "" +
 	"\brequired\x18\xe8\a \x01(\bR\brequiredB\x06\n" +
 	"\x04type:O\n" +
 	"\x05field\x12\x1d.google.protobuf.FieldOptions\x18\x98\xf9\x06 \x01(\v2\x18.buf.validate.FieldRulesR\x05fieldB\xaf\x01\n" +
-	"\x10com.buf.validateB\rValidateProtoP\x01Z;github.com/pyrecycleheat/backend-go/api/gen/go/buf/validate\xa2\x02\x03BVX\xaa\x02\fBuf.Validate\xca\x02\fBuf\\Validate\xe2\x02\x18Buf\\Validate\\GPBMetadata\xea\x02\rBuf::Validateb\x06proto3"
+	"\x10com.buf.validateB\rValidateProtoP\x01Z;github.com/pyrecycleheat/backend/api/gen/go/buf/validate\xa2\x02\x03BVX\xaa\x02\fBuf.Validate\xca\x02\fBuf\\Validate\xe2\x02\x18Buf\\Validate\\GPBMetadata\xea\x02\rBuf::Validateb\x06proto3"
 
 var (
 	file_buf_validate_validate_proto_rawDescOnce sync.Once

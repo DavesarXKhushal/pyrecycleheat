@@ -10,10 +10,10 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpchealth"
 	"connectrpc.com/grpcreflect"
-	"github.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1/pyrecycleheatv1connect"
-	db "github.com/pyrecycleheat/backend-go/internal/database"
-	"github.com/pyrecycleheat/backend-go/internal/engine"
-	"github.com/pyrecycleheat/backend-go/internal/service"
+	"github.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1/pyrecycleheatv1connect"
+	db "github.com/pyrecycleheat/backend/internal/database"
+	"github.com/pyrecycleheat/backend/internal/engine"
+	"github.com/pyrecycleheat/backend/internal/service"
 )
 
 // NewConnectMux returns an http.Handler serving ConnectRPC services under /rpc.

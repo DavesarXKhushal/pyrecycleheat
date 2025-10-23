@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
-	db "github.com/pyrecycleheat/backend-go/internal/database"
+	db "github.com/pyrecycleheat/backend/internal/database"
 )
 
 // setupTestDB creates an in-memory SQLite database for testing.

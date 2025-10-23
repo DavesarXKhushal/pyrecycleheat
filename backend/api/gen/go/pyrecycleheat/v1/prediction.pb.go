@@ -7,13 +7,14 @@
 package pyrecycleheatv1
 
 import (
-	_ "github.com/pyrecycleheat/backend-go/api/gen/go/buf/validate"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "github.com/pyrecycleheat/backend/api/gen/go/buf/validate"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -2764,7 +2765,7 @@ const file_pyrecycleheat_v1_prediction_proto_rawDesc = "" +
 	"created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"4\n" +
 	"\x1aGetPredictionResultRequest\x12\x16\n" +
 	"\x02id\x18\x01 \x01(\x03B\x06\xc2\xc97\x02\x1a\x00R\x02idB\xd9\x01\n" +
-	"\x14com.pyrecycleheat.v1B\x0fPredictionProtoP\x01ZOgithub.com/pyrecycleheat/backend-go/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1\xa2\x02\x03PXX\xaa\x02\x10Pyrecycleheat.V1\xca\x02\x10Pyrecycleheat\\V1\xe2\x02\x1cPyrecycleheat\\V1\\GPBMetadata\xea\x02\x11Pyrecycleheat::V1b\x06proto3"
+	"\x14com.pyrecycleheat.v1B\x0fPredictionProtoP\x01ZOgithub.com/pyrecycleheat/backend/api/gen/go/pyrecycleheat/v1;pyrecycleheatv1\xa2\x02\x03PXX\xaa\x02\x10Pyrecycleheat.V1\xca\x02\x10Pyrecycleheat\\V1\xe2\x02\x1cPyrecycleheat\\V1\\GPBMetadata\xea\x02\x11Pyrecycleheat::V1b\x06proto3"
 
 var (
 	file_pyrecycleheat_v1_prediction_proto_rawDescOnce sync.Once

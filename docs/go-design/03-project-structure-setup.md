@@ -14,7 +14,7 @@ This document defines the complete project structure, Gin routing, ConnectRPC se
 
 ```
 pyrecycleheat/
-├── backend-go/                    # New Go backend
+├── backend/                    # New Go backend
 │   ├── cmd/
 │   │   └── server/
 │   │       └── main.go           # Application entry point
@@ -102,13 +102,13 @@ import (
     "time"
 
     "github.com/gin-gonic/gin"
-    "github.com/pyrecycleheat/backend-go/internal/config"
-    "github.com/pyrecycleheat/backend-go/internal/database"
-    "github.com/pyrecycleheat/backend-go/internal/engine"
-    "github.com/pyrecycleheat/backend-go/internal/handler/connectrpc"
-    "github.com/pyrecycleheat/backend-go/internal/handler/rest"
-    "github.com/pyrecycleheat/backend-go/internal/router"
-    "github.com/pyrecycleheat/backend-go/internal/service"
+    "github.com/pyrecycleheat/backend/internal/config"
+    "github.com/pyrecycleheat/backend/internal/database"
+    "github.com/pyrecycleheat/backend/internal/engine"
+    "github.com/pyrecycleheat/backend/internal/handler/connectrpc"
+    "github.com/pyrecycleheat/backend/internal/handler/rest"
+    "github.com/pyrecycleheat/backend/internal/router"
+    "github.com/pyrecycleheat/backend/internal/service"
 )
 
 func main() {
@@ -324,7 +324,7 @@ package router
 
 import (
     "github.com/gin-gonic/gin"
-    "github.com/pyrecycleheat/backend-go/internal/handler/rest"
+    "github.com/pyrecycleheat/backend/internal/handler/rest"
 )
 
 // RegisterRESTRoutes registers all REST API routes
@@ -437,7 +437,7 @@ import (
     "net/http"
 
     "connectrpc.com/connect"
-    "github.com/pyrecycleheat/backend-go/internal/handler/connectrpc"
+    "github.com/pyrecycleheat/backend/internal/handler/connectrpc"
     v1 "github.com/pyrecycleheat/api/gen/go/pyrecycleheat/v1"
     "github.com/pyrecycleheat/api/gen/go/pyrecycleheat/v1/pyrecycleheatv1connect"
 )
@@ -931,7 +931,7 @@ PYRECYCLEHEAT_VERSION=1.0.0
 ## go.mod (Initial Dependencies)
 
 ```go
-module github.com/pyrecycleheat/backend-go
+module github.com/pyrecycleheat/backend
 
 go 1.23
 
@@ -981,7 +981,7 @@ require (
 **Next Steps:**
 
 1. ✅ Create directory structure
-2. ✅ Initialize Go module: `go mod init github.com/pyrecycleheat/backend-go`
+2. ✅ Initialize Go module: `go mod init github.com/pyrecycleheat/backend`
 3. ✅ Copy protobuf schemas to `shared/proto/`
 4. ✅ Run `buf generate` to generate protobuf code
 5. ✅ Create SQL schema and query files
