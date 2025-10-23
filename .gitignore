@@ -22,3 +22,29 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cursor AI
+.cursor/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+*.egg
+
+# Database files
+*.db
+*.db-journal
+
+# Build outputs (binaries only, not generated code)
+backend/bin/
+**/build/
+
+# Keep generated protobuf code but ignore other builds
+# (protobuf generated code should be committed)
